@@ -2,14 +2,14 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
       {/* Hero */}
-      <section className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">
-        <span className="mb-4 inline-block rounded-full bg-bg-muted px-4 py-1.5 text-sm font-medium text-accent">
+      <section className="flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-bg-muted to-body-bg px-6 py-24 text-center">
+        <span className="mb-4 inline-block rounded-full bg-bg-light px-4 py-1.5 text-sm font-medium text-primary">
           AI 기반 비자 서류 자동화
         </span>
         <h1 className="mb-6 max-w-3xl font-[family-name:var(--font-display)] text-4xl font-bold leading-tight tracking-tight sm:text-5xl md:text-6xl">
           복잡한 비자 서류,
           <br />
-          <span className="text-accent">AI가 대신 작성합니다</span>
+          <span className="text-primary">AI가 대신 작성합니다</span>
         </h1>
         <p className="mb-10 max-w-xl text-lg leading-relaxed text-text-secondary">
           출입국 양식 자동화, AI OCR 문서 인식, 실시간 공문서 미리보기까지.

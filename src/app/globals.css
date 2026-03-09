@@ -2,24 +2,24 @@
 
 @theme {
   /* Core Brand */
-  --color-primary: #1B365D;
-  --color-primary-hover: #244270;
-  --color-accent: #2B7A78;
-  --color-accent-hover: #358F8C;
+  --color-primary: #2463EB;
+  --color-primary-hover: #1966a4;
+  --color-accent: #93ceff;
+  --color-accent-hover: #7abfff;
 
   /* Text */
-  --color-text-primary: #1B365D;
+  --color-text-primary: #1a2b4a;
   --color-text-secondary: #4A5568;
   --color-text-muted: #718096;
 
   /* Borders */
-  --color-border: #E2E8F0;
-  --color-border-light: #EDF2F7;
+  --color-border: #c9e7ff;
+  --color-border-light: #e0f0ff;
 
   /* Backgrounds */
   --color-body-bg: #FFFFFF;
-  --color-bg-light: #F7FAFC;
-  --color-bg-muted: #EDF2F7;
+  --color-bg-light: #c9e7ff;
+  --color-bg-muted: #e8f4ff;
 
   --font-display: 'Manrope', 'Inter', -apple-system, sans-serif;
   --font-body: 'Inter', -apple-system, sans-serif;
