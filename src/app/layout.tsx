@@ -15,9 +15,46 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Linkvisa - 비자 서류처리 SaaS',
+  title: '링크비자 (LinkVisa) | 외국인 비자 업무 관리 도구 | 서류처리 10분만에 끝',
   description:
-    '복잡한 출입국 양식을 자동화하고, AI OCR로 문서를 인식하며, 실시간으로 공문서 양식에 데이터가 적용되는 서비스.',
+    '반복되는 비자 서류 작성과 정리는 LinkVisa가 처리합니다. 행정사는 고객 상담과 매출에만 집중하세요!',
+  keywords: [
+    '비자 서류 자동화',
+    '행정사 업무 도구',
+    '외국인 비자 관리',
+    '출입국 서류 작성',
+    'AI OCR 문서 인식',
+    '비자 업무 효율화',
+    '행정사 SaaS',
+    '링크비자',
+    'LinkVisa',
+    '비자 서류처리',
+    '외국인 체류 관리',
+    '행정사 솔루션',
+  ],
+  alternates: {
+    canonical: 'https://www.linkvisa.kr',
+  },
+  openGraph: {
+    title: '링크비자 (LinkVisa) | 외국인 비자 업무 관리 도구',
+    description:
+      '반복되는 비자 서류 작성과 정리는 LinkVisa가 처리합니다. 행정사는 고객 상담과 매출에만 집중하세요!',
+    url: 'https://www.linkvisa.kr',
+    siteName: '링크비자 (LinkVisa)',
+    locale: 'ko_KR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: '링크비자 (LinkVisa) | 외국인 비자 업무 관리 도구',
+    description:
+      '반복되는 비자 서류 작성과 정리는 LinkVisa가 처리합니다. 행정사는 고객 상담과 매출에만 집중하세요!',
+  },
+  verification: {
+    other: {
+      'naver-site-verification': ['b45dda53e81a0fdb101e001fd808ede340f7ca88'],
+    },
+  },
 };
 
 export default function RootLayout({
