@@ -1,10 +1,12 @@
+"use client";
+
 import Link from "next/link";
 
 export default function LandingNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-black/5 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <span className="text-xl font-bold text-primary">LinkVisa</span>
+        <Link href="/" className="text-xl font-bold text-primary" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>LinkVisa</Link>
         <div className="flex items-center gap-4">
           <Link
             href="/login"
