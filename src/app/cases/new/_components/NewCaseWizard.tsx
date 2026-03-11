@@ -8,8 +8,7 @@ import type { ApplicationType } from '@/types/case';
 import WizardLayout from './WizardLayout';
 import StepApplicationType from './StepApplicationType';
 import StepVisaType from './StepVisaType';
-import StepForeignerName from './StepForeignerName';
-import StepEntityName from './StepEntityName';
+import StepNameInput from './StepNameInput';
 
 function getBaseVisaCode(code: string): string {
   const parts = code.split('-');
@@ -84,17 +83,21 @@ export default function NewCaseWizard() {
         <StepVisaType value={visaType} onSelect={handleVisaSelect} />
       )}
       {step === 3 && (
-        <StepForeignerName
+        <StepNameInput
+          title="외국인의 이름을 입력해 주세요"
+          subtitle="여권에 기재된 영문 이름을 입력합니다"
+          placeholder="예: NGUYEN VAN A"
+          submitLabel={showSubmitOnNameStep ? '케이스 생성' : '다음'}
           value={foreignerName}
           onChange={setForeignerName}
-          showSubmit={showSubmitOnNameStep}
           onSubmit={handleNameNext}
         />
       )}
       {step === 4 && entityConfig && (
-        <StepEntityName
-          label={entityConfig.label}
+        <StepNameInput
+          title={entityConfig.label}
           placeholder={entityConfig.placeholder}
+          submitLabel="케이스 생성"
           value={entityName}
           onChange={setEntityName}
           onSubmit={handleCreateCase}

@@ -310,7 +310,7 @@ export const manualFieldRegistry: ManualFieldDef[] = [
 
 export const sectionMeta: Record<
   ManualFieldDef['section'],
-  { label: string; defaultOpen: boolean; visaFilter?: string[] }
+  { label: string; defaultOpen: boolean; visaFilter?: string[]; badge?: string }
 > = {
   unified_app: {
     label: '통합신청서',
@@ -320,6 +320,7 @@ export const sectionMeta: Record<
     label: '고용사유서 수치 정보',
     defaultOpen: true,
     visaFilter: ['E-7'],
+    badge: '서술 항목은 AI가 자동 작성',
   },
   guarantor: {
     label: '신원보증서',
@@ -334,6 +335,7 @@ export const sectionMeta: Record<
   other: {
     label: '기타',
     defaultOpen: false,
+    badge: '기본값 자동 설정됨',
   },
 };
 

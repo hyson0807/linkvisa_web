@@ -1,19 +1,18 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
-
-const emptySubscribe = () => () => {};
+import { useState, useEffect } from 'react';
 
 export default function StoreProvider({ children }: { children: React.ReactNode }) {
-  const hydrated = useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  return (
+    <>
+      {!hydrated && <style>{`[data-store-dependent] { visibility: hidden; }`}</style>}
+      {children}
+    </>
   );
-
-  if (!hydrated) {
-    return <div className="min-h-screen" />;
-  }
-
-  return <>{children}</>;
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useCaseStore } from '@/store/case-store';
 import {
   getFieldsForVisa,
@@ -17,20 +18,22 @@ interface ManualInputStepProps {
 
 export default function ManualInputStep({ caseData, onNext, onPrev }: ManualInputStepProps) {
   const setManualField = useCaseStore((s) => s.setManualField);
-  const fields = getFieldsForVisa(caseData.visaType);
   const values = caseData.manualFields ?? {};
 
-  const sectionFields: Record<string, ManualFieldDef[]> = {};
-  for (const f of fields) {
-    if (!sectionFields[f.section]) sectionFields[f.section] = [];
-    sectionFields[f.section].push(f);
-  }
-
-  const visibleSections = sectionOrder.filter((sec) => {
-    const meta = sectionMeta[sec];
-    if (meta.visaFilter && !meta.visaFilter.includes(caseData.visaType)) return false;
-    return sectionFields[sec] && sectionFields[sec].length > 0;
-  });
+  const { fields, sectionFields, visibleSections } = useMemo(() => {
+    const f = getFieldsForVisa(caseData.visaType);
+    const sf: Record<string, ManualFieldDef[]> = {};
+    for (const field of f) {
+      if (!sf[field.section]) sf[field.section] = [];
+      sf[field.section].push(field);
+    }
+    const vs = sectionOrder.filter((sec) => {
+      const meta = sectionMeta[sec];
+      if (meta.visaFilter && !meta.visaFilter.includes(caseData.visaType)) return false;
+      return sf[sec] && sf[sec].length > 0;
+    });
+    return { fields: f, sectionFields: sf, visibleSections: vs };
+  }, [caseData.visaType]);
 
   const requiredFields = fields.filter((f) => f.required);
   const filledRequired = requiredFields.filter((f) => values[f.id]?.trim()).length;
@@ -86,7 +89,7 @@ export default function ManualInputStep({ caseData, onNext, onPrev }: ManualInpu
               fields={sectionFields[sec]}
               values={values}
               defaultOpen={meta.defaultOpen}
-              badge={sec === 'other' ? '기본값 자동 설정됨' : sec === 'employment_reason' ? '서술 항목은 AI가 자동 작성' : undefined}
+              badge={meta.badge}
               onChange={handleChange}
             />
           );

@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useCaseStore } from '@/store/case-store';
 import { resolveDocsWithType } from '@/lib/document-registry';
+import ModalOverlay from '@/app/cases/_components/ModalOverlay';
 import { readFileAsDataUrl, formatFileSize } from '@/lib/file-utils';
 import type { Case, DocWithType, DocumentTypeDef, CaseDocument } from '@/types/case';
 
@@ -168,48 +169,47 @@ function CollapsibleSection({
 }
 
 function AddDocumentModal({
+  isOpen,
   onAdd,
   onClose,
 }: {
+  isOpen: boolean;
   onAdd: (label: string) => void;
   onClose: () => void;
 }) {
   const [label, setLabel] = useState('');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-bold text-black/85 mb-4">서류 추가</h3>
-        <input
-          autoFocus
-          type="text"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && label.trim()) {
-              onAdd(label.trim());
-            }
-          }}
-          placeholder="서류 이름 입력 (예: 자격증 사본)"
-          className={INPUT_CLASS}
-        />
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-black/40 hover:bg-black/5 transition-colors"
-          >
-            취소
-          </button>
-          <button
-            onClick={() => label.trim() && onAdd(label.trim())}
-            disabled={!label.trim()}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-40 hover:bg-primary-dark transition-colors"
-          >
-            추가
-          </button>
-        </div>
+    <ModalOverlay isOpen={isOpen} onClose={onClose} title="서류 추가">
+      <input
+        autoFocus
+        type="text"
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && label.trim()) {
+            onAdd(label.trim());
+          }
+        }}
+        placeholder="서류 이름 입력 (예: 자격증 사본)"
+        className={INPUT_CLASS}
+      />
+      <div className="mt-4 flex justify-end gap-2">
+        <button
+          onClick={onClose}
+          className="rounded-lg px-4 py-2 text-sm font-medium text-black/40 hover:bg-black/5 transition-colors"
+        >
+          취소
+        </button>
+        <button
+          onClick={() => label.trim() && onAdd(label.trim())}
+          disabled={!label.trim()}
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-40 hover:bg-primary-dark transition-colors"
+        >
+          추가
+        </button>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }
 
@@ -219,11 +219,13 @@ const INPUT_CLASS =
 export default function UploadStep({ caseData, onNext }: UploadStepProps) {
   const setManualField = useCaseStore((s) => s.setManualField);
   const addCustomDocument = useCaseStore((s) => s.addCustomDocument);
-  const specialistRole = caseData.manualFields?.specialist_role ?? '';
 
   const [addModalCategory, setAddModalCategory] = useState<'foreigner' | 'company' | null>(null);
 
-  const docsWithType = resolveDocsWithType(caseData).filter((d) => d.docType.source === 'upload');
+  const docsWithType = useMemo(
+    () => resolveDocsWithType(caseData).filter((d) => d.docType.source === 'upload'),
+    [caseData]
+  );
 
   const foreignerDocs = docsWithType.filter((d) => d.docType.category === 'foreigner');
   const companyDocs = docsWithType.filter((d) => d.docType.category === 'company');
@@ -269,7 +271,7 @@ export default function UploadStep({ caseData, onNext }: UploadStepProps) {
               <label className="mb-2 block text-sm font-semibold text-black/55">자격 직종</label>
               <input
                 type="text"
-                value={specialistRole}
+                value={caseData.manualFields?.specialist_role ?? ''}
                 onChange={(e) => setManualField(caseData.id, 'specialist_role', e.target.value)}
                 placeholder="예: 소프트웨어 개발자, 용접 기능사"
                 className={INPUT_CLASS}
@@ -328,12 +330,11 @@ export default function UploadStep({ caseData, onNext }: UploadStepProps) {
         />
       </div>
 
-      {addModalCategory && (
-        <AddDocumentModal
-          onAdd={handleAddCustom}
-          onClose={() => setAddModalCategory(null)}
-        />
-      )}
+      <AddDocumentModal
+        isOpen={!!addModalCategory}
+        onAdd={handleAddCustom}
+        onClose={() => setAddModalCategory(null)}
+      />
 
       <div className="mt-8 flex items-center justify-between">
         {!hasAnyUpload && (

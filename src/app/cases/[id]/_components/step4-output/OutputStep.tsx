@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { resolveDocsWithType } from '@/lib/document-registry';
 import type { Case, CaseDocument, DocumentTypeDef } from '@/types/case';
 import GeneratedDocCard from './GeneratedDocCard';
@@ -13,7 +13,7 @@ interface OutputStepProps {
 }
 
 export default function OutputStep({ caseData, onPrev }: OutputStepProps) {
-  const docsWithType = resolveDocsWithType(caseData);
+  const docsWithType = useMemo(() => resolveDocsWithType(caseData), [caseData]);
 
   const generatedDocs = docsWithType.filter(
     (d) => d.docType.source === 'form-generate' || d.docType.source === 'ai-generate'

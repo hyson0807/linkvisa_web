@@ -7,10 +7,6 @@ import { idbStorage } from '@/lib/idb-storage';
 
 interface CaseStore {
   cases: Case[];
-  isNewCaseModalOpen: boolean;
-
-  openNewCaseModal: () => void;
-  closeNewCaseModal: () => void;
 
   createCase: (foreignerName: string, companyName: string, visaType: string, applicationType?: ApplicationType) => string;
   getCase: (id: string) => Case | undefined;
@@ -31,10 +27,6 @@ export const useCaseStore = create<CaseStore>()(
   persist(
     (set, get) => ({
       cases: [],
-      isNewCaseModalOpen: false,
-
-      openNewCaseModal: () => set({ isNewCaseModalOpen: true }),
-      closeNewCaseModal: () => set({ isNewCaseModalOpen: false }),
 
       createCase: (foreignerName, companyName, visaType, applicationType?) => {
         const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -59,7 +51,6 @@ export const useCaseStore = create<CaseStore>()(
 
         set((state) => ({
           cases: [...state.cases, newCase],
-          isNewCaseModalOpen: false,
         }));
 
         return id;
