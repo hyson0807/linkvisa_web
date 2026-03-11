@@ -1,7 +1,44 @@
+'use client';
+
+import { useState } from 'react';
+import AppHeader from './_components/AppHeader';
+import PageHeadline from './_components/PageHeadline';
+import NewCaseButton from './_components/NewCaseButton';
+import CaseCard from './_components/CaseCard';
+import { mockCases } from '@/lib/mock-cases';
+import type { Case } from '@/types/case';
+
 export default function DashboardPage() {
+  const [cases, setCases] = useState<Case[]>(mockCases);
+
+  const handleDelete = (id: string) => {
+    setCases((prev) => prev.filter((c) => c.id !== id));
+  };
+
   return (
-    <main>
-      <h1>대시보드</h1>
-    </main>
+    <>
+      <AppHeader />
+      <main className="mx-auto max-w-4xl px-6 py-10">
+        <div className="mb-8 flex items-start justify-between">
+          <PageHeadline
+            title={'외국인 1명 = 케이스 1개\n모든 서류와 진행상황을 한 곳에서 관리합니다'}
+          />
+          <NewCaseButton />
+        </div>
+
+        {cases.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-black/10 bg-white/50 py-20 text-center">
+            <p className="mb-4 text-sm text-black/40">아직 케이스가 없습니다</p>
+            <NewCaseButton />
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {cases.map((c) => (
+              <CaseCard key={c.id} caseData={c} onDelete={handleDelete} />
+            ))}
+          </div>
+        )}
+      </main>
+    </>
   );
 }

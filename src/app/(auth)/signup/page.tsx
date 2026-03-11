@@ -1,13 +1,10 @@
-import type { Metadata } from "next";
-import Link from "next/link";
+"use client";
 
-export const metadata: Metadata = {
-  title: "회원가입 | 링크비자 (LinkVisa)",
-  description:
-    "링크비자에 가입하여 비자 서류 자동화 서비스를 이용하세요.",
-};
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
+  const router = useRouter();
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
       {/* 배경 데코레이션 */}
@@ -39,7 +36,7 @@ export default function SignupPage() {
           </p>
 
           {/* 폼 (UI only) */}
-          <form className="space-y-5">
+          <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); router.push("/dashboard"); }}>
             {/* 이름 */}
             <div>
               <label
