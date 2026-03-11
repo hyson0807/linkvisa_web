@@ -64,3 +64,5 @@ export interface Case {
   customDocTypes?: DocumentTypeDef[];
   createdAt: string;
 }
+
+export type DocWithType = { caseDoc: CaseDocument; docType: DocumentTypeDef };

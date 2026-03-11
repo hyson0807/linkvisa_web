@@ -1,19 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useCaseStore } from '@/store/case-store';
 import AppHeader from './_components/AppHeader';
 import PageHeadline from './_components/PageHeadline';
 import NewCaseButton from './_components/NewCaseButton';
 import CaseCard from './_components/CaseCard';
-import { mockCases } from '@/lib/mock-cases';
-import type { Case } from '@/types/case';
 
 export default function DashboardPage() {
-  const [cases, setCases] = useState<Case[]>(mockCases);
-
-  const handleDelete = (id: string) => {
-    setCases((prev) => prev.filter((c) => c.id !== id));
-  };
+  const cases = useCaseStore((s) => s.cases);
+  const deleteCase = useCaseStore((s) => s.deleteCase);
 
   return (
     <>
@@ -34,7 +29,7 @@ export default function DashboardPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {cases.map((c) => (
-              <CaseCard key={c.id} caseData={c} onDelete={handleDelete} />
+              <CaseCard key={c.id} caseData={c} onDelete={deleteCase} />
             ))}
           </div>
         )}

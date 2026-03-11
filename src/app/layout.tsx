@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Manrope, Inter } from 'next/font/google';
+import StoreProvider from '@/store/StoreProvider';
 import './globals.css';
 
 const manrope = Manrope({
@@ -64,7 +65,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className={`${manrope.variable} ${inter.variable}`}>
-      <body>{children}</body>
+      <body><StoreProvider>{children}</StoreProvider></body>
     </html>
   );
 }
