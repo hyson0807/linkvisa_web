@@ -1,10 +1,42 @@
 "use client";
 
+import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/auth-store";
+import { ApiError } from "@/lib/api";
 
 export default function SignupPage() {
   const router = useRouter();
+  const signup = useAuthStore((s) => s.signup);
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (password !== passwordConfirm) {
+      setError("비밀번호가 일치하지 않습니다");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await signup({ name, email, password, passwordConfirm });
+      router.push("/dashboard");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "회원가입에 실패했습니다");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
       {/* 배경 데코레이션 */}
@@ -35,8 +67,14 @@ export default function SignupPage() {
             링크비자와 함께 비자 서류를 간편하게 관리하세요
           </p>
 
-          {/* 폼 (UI only) */}
-          <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); router.push("/dashboard"); }}>
+          {error && (
+            <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
+
+          {/* 폼 */}
+          <form className="space-y-5" onSubmit={handleSubmit}>
             {/* 이름 */}
             <div>
               <label
@@ -48,8 +86,11 @@ export default function SignupPage() {
               <input
                 id="name"
                 type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="홍길동"
                 autoComplete="name"
+                required
                 className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/60 transition-shadow focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
@@ -65,8 +106,11 @@ export default function SignupPage() {
               <input
                 id="email"
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
                 autoComplete="email"
+                required
                 className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/60 transition-shadow focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
@@ -82,8 +126,11 @@ export default function SignupPage() {
               <input
                 id="password"
                 type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 autoComplete="new-password"
+                required
                 className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/60 transition-shadow focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
@@ -99,8 +146,11 @@ export default function SignupPage() {
               <input
                 id="password-confirm"
                 type="password"
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
                 placeholder="••••••••"
                 autoComplete="new-password"
+                required
                 className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/60 transition-shadow focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
@@ -108,9 +158,10 @@ export default function SignupPage() {
             {/* 회원가입 버튼 */}
             <button
               type="submit"
-              className="cta-btn w-full rounded-2xl bg-primary py-3.5 text-base font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary-hover"
+              disabled={isSubmitting}
+              className="cta-btn w-full rounded-2xl bg-primary py-3.5 text-base font-semibold text-white shadow-lg shadow-primary/20 hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              회원가입
+              {isSubmitting ? "가입 중..." : "회원가입"}
             </button>
           </form>
 
