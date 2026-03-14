@@ -3,9 +3,9 @@
 export type WizardStep = 'upload' | 'manual-input' | 'review' | 'output';
 
 const publicSteps: { key: Exclude<WizardStep, 'review'>; label: string }[] = [
-  { key: 'upload', label: '서류 업로드' },
-  { key: 'manual-input', label: '추가 정보 입력' },
-  { key: 'output', label: '공문서 완성' },
+  { key: 'upload', label: '서류업로드' },
+  { key: 'manual-input', label: '정보입력' },
+  { key: 'output', label: '공문서' },
 ];
 
 interface StepIndicatorProps {
@@ -19,12 +19,11 @@ export default function StepIndicator({ currentStep, onStepClick }: StepIndicato
   const currentIndex = publicSteps.findIndex((s) => s.key === visualCurrentStep);
 
   return (
-    <div className="mb-8 flex items-center justify-center">
+    <div className="flex items-center gap-1">
       {publicSteps.map((step, i) => {
         const isActive = i === currentIndex;
         const isDone = i < currentIndex;
         const isClickable = isDone && onStepClick;
-        const showReviewProgress = currentStep === 'review' && i === 0;
 
         return (
           <div key={step.key} className="flex items-center">
@@ -32,16 +31,12 @@ export default function StepIndicator({ currentStep, onStepClick }: StepIndicato
               type="button"
               disabled={!isClickable}
               onClick={() => isClickable && onStepClick(step.key)}
-              className={`flex items-center gap-3 rounded-xl px-5 py-3 transition-all ${
-                isActive
-                  ? 'bg-primary/10 ring-2 ring-primary/30'
-                  : isDone
-                    ? 'bg-primary/5 cursor-pointer hover:bg-primary/10'
-                    : 'bg-black/2'
+              className={`flex items-center gap-1.5 transition-all ${
+                isDone ? 'cursor-pointer' : ''
               }`}
             >
               <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold transition-colors ${
+                className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold transition-colors ${
                   isActive
                     ? 'bg-primary text-white'
                     : isDone
@@ -50,7 +45,7 @@ export default function StepIndicator({ currentStep, onStepClick }: StepIndicato
                 }`}
               >
                 {isDone ? (
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 ) : (
@@ -58,7 +53,7 @@ export default function StepIndicator({ currentStep, onStepClick }: StepIndicato
                 )}
               </div>
               <span
-                className={`text-[15px] font-semibold tracking-tight ${
+                className={`text-[13px] font-medium ${
                   isActive ? 'text-primary' : isDone ? 'text-primary-dark' : 'text-black/30'
                 }`}
               >
@@ -66,13 +61,7 @@ export default function StepIndicator({ currentStep, onStepClick }: StepIndicato
               </span>
             </button>
             {i < publicSteps.length - 1 && (
-              <div className="mx-2 flex h-10 w-20 items-center justify-center">
-                <div
-                  className={`h-px w-full ${
-                    i < currentIndex || showReviewProgress ? 'bg-primary' : 'bg-black/10'
-                  }`}
-                />
-              </div>
+              <span className="mx-1.5 text-[13px] text-black/20">—</span>
             )}
           </div>
         );

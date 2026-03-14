@@ -3,13 +3,72 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useCaseStore } from '@/store/case-store';
 import { resolveDocsWithType } from '@/lib/document-registry';
-import ModalOverlay from '@/app/cases/_components/ModalOverlay';
 import { readFileAsDataUrl, formatFileSize } from '@/lib/file-utils';
+import { D2_STUDENT_DOC_IDS } from '@/lib/document-registry';
+import {
+  getProvidersForVisa,
+  getProviderForDoc,
+  getProviderStyles,
+} from '@/lib/provider-registry';
+import type { DocumentProvider, ProviderIcon } from '@/lib/provider-registry';
 import type { Case, DocWithType, DocumentTypeDef, CaseDocument } from '@/types/case';
 
 interface UploadStepProps {
   caseData: Case;
   onNext: () => void;
+}
+
+function ProviderIcon({ icon }: { icon: ProviderIcon }) {
+  switch (icon) {
+    case 'person':
+      return (
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0" />
+        </svg>
+      );
+    case 'building':
+      return (
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5M3.75 3v18m16.5-18v18M5.25 3h13.5M5.25 21V10.5m0 0h4.5m-4.5 0V3m13.5 7.5V3m0 7.5h-4.5m4.5 0V21" />
+        </svg>
+      );
+    case 'school':
+      return (
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342" />
+        </svg>
+      );
+    case 'heart':
+      return (
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+        </svg>
+      );
+    case 'couple':
+      return (
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+        </svg>
+      );
+    case 'photo':
+      return (
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
+        </svg>
+      );
+    case 'gov':
+      return (
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z" />
+        </svg>
+      );
+    default:
+      return (
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+        </svg>
+      );
+  }
 }
 
 function DocumentSlot({
@@ -76,7 +135,13 @@ function DocumentSlot({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[17px] font-semibold text-black/85">{docType.label}</div>
+          <div className="text-[17px] font-semibold text-black/85 leading-snug">
+            {(() => {
+              const m = docType.label.match(/^(.+?)\s*(\(.+\))$/);
+              if (m) return <>{m[1]}<br /><span className="text-[15px] font-medium text-black/45">{m[2]}</span></>;
+              return docType.label;
+            })()}
+          </div>
           {hasFile && caseDoc.file && (
             <div className="text-sm text-primary/70">
               {caseDoc.file.name} ({formatFileSize(caseDoc.file.size)})
@@ -104,14 +169,16 @@ function DocumentSlot({
   );
 }
 
-function CollapsibleSection({
+function ProviderColumn({
   title,
   icon,
   iconBg,
   iconColor,
   docs,
   caseId,
+  providerId,
   onAddCustom,
+  onCopyLink,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -119,140 +186,283 @@ function CollapsibleSection({
   iconColor: string;
   docs: DocWithType[];
   caseId: string;
+  providerId: string;
   onAddCustom: () => void;
+  onCopyLink: (providerId: string) => void;
 }) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [copied, setCopied] = useState(false);
   const doneCount = docs.filter((d) => d.caseDoc.file).length;
 
+  const handleCopy = () => {
+    onCopyLink(providerId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const linkUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/submit/${caseId}/${providerId}`
+    : `/submit/${caseId}/${providerId}`;
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* 요청 링크 복사 카드 */}
+      <div className={`mb-3 flex items-center gap-3 rounded-xl border px-4 py-3 transition-all ${
+        copied
+          ? 'border-green-200 bg-green-50'
+          : 'border-primary/10 bg-primary/[0.02] hover:border-primary/20 hover:bg-primary/[0.04]'
+      }`}>
+        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+          copied ? 'bg-green-100 text-green-600' : 'bg-primary/10 text-primary'
+        }`}>
+          {copied ? (
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+            </svg>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13px] font-medium text-black/60">
+            {linkUrl}
+          </p>
+        </div>
+        <button
+          onClick={handleCopy}
+          className={`shrink-0 rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-all ${
+            copied
+              ? 'bg-green-500 text-white'
+              : 'bg-primary text-white hover:bg-primary-dark'
+          }`}
+        >
+          {copied ? '복사됨' : '링크 복사'}
+        </button>
+      </div>
+
+      {/* Card */}
+      <div className="flex flex-1 flex-col rounded-2xl border border-black/5 bg-white shadow-sm">
+        {/* Header */}
+        <div className="flex items-center gap-2.5 border-b border-black/5 px-5 py-4">
+          <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${iconBg} ${iconColor}`}>
+            {icon}
+          </div>
+          <h3 className="text-[15px] font-bold text-black/70">{title}</h3>
+          <span className="ml-auto text-sm font-medium text-black/30">
+            {doneCount}/{docs.length}
+          </span>
+        </div>
+
+      {/* Document list */}
+      <div className="flex flex-1 flex-col gap-3 p-4">
+        {docs.map(({ caseDoc, docType }) => (
+          <DocumentSlot key={caseDoc.id} docType={docType} caseDoc={caseDoc} caseId={caseId} />
+        ))}
+        <button
+          onClick={onAddCustom}
+          className="mt-auto flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-black/8 py-3 text-[14px] font-medium text-black/30 hover:border-primary/30 hover:text-primary/60 transition-all"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          서류 직접 추가
+        </button>
+      </div>
+      </div>
+    </div>
+  );
+}
+
+function StudentDocSection({ docs, caseId }: { docs: DocWithType[]; caseId: string }) {
   return (
     <div className="rounded-xl border border-black/5 bg-white shadow-sm">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center gap-2.5 p-5 text-left"
-      >
-        <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${iconBg} ${iconColor}`}>
-          {icon}
+      <div className="flex w-full items-center gap-2.5 p-5">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+          </svg>
         </div>
-        <h3 className="text-[15px] font-bold text-black/70">{title}</h3>
+        <h3 className="text-[15px] font-bold text-black/70">학생 제출 서류</h3>
         <span className="ml-auto mr-2 text-sm text-black/30">
-          {doneCount}/{docs.length}
+          {docs.filter((d) => d.caseDoc.file).length}/{docs.length}
         </span>
-        <svg
-          className={`h-4 w-4 text-black/30 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {isOpen && (
-        <div className="space-y-3 px-5 pb-5">
-          {docs.map(({ caseDoc, docType }) => (
-            <DocumentSlot key={caseDoc.id} docType={docType} caseDoc={caseDoc} caseId={caseId} />
-          ))}
-          <button
-            onClick={onAddCustom}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-black/8 py-3 text-[14px] font-medium text-black/30 hover:border-primary/30 hover:text-primary/60 transition-all"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            서류 직접 추가
-          </button>
-        </div>
-      )}
+      </div>
+      <div className="space-y-3 px-5 pb-5">
+        {docs.map(({ caseDoc, docType }) => (
+          <div key={caseDoc.id} className={`rounded-xl border p-4 ${
+            caseDoc.file
+              ? 'border-green-200 bg-green-50/50'
+              : 'border-black/8 bg-black/[0.02]'
+          }`}>
+            <div className="flex items-center gap-3">
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                caseDoc.file ? 'bg-green-100 text-green-600' : 'bg-black/5 text-black/25'
+              }`}>
+                {caseDoc.file ? (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[15px] font-semibold text-black/80">{docType.label}</div>
+                <div className="text-sm text-black/35">
+                  {caseDoc.file ? `${caseDoc.file.name} (${formatFileSize(caseDoc.file.size)})` : '학생 제출 대기'}
+                </div>
+              </div>
+              {caseDoc.file && (
+                <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-600">제출됨</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 function AddDocumentModal({
-  isOpen,
   onAdd,
   onClose,
 }: {
-  isOpen: boolean;
   onAdd: (label: string) => void;
   onClose: () => void;
 }) {
   const [label, setLabel] = useState('');
 
   return (
-    <ModalOverlay isOpen={isOpen} onClose={onClose} title="서류 추가">
-      <input
-        autoFocus
-        type="text"
-        value={label}
-        onChange={(e) => setLabel(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && label.trim()) {
-            onAdd(label.trim());
-          }
-        }}
-        placeholder="서류 이름 입력 (예: 자격증 사본)"
-        className={INPUT_CLASS}
-      />
-      <div className="mt-4 flex justify-end gap-2">
-        <button
-          onClick={onClose}
-          className="rounded-lg px-4 py-2 text-sm font-medium text-black/40 hover:bg-black/5 transition-colors"
-        >
-          취소
-        </button>
-        <button
-          onClick={() => label.trim() && onAdd(label.trim())}
-          disabled={!label.trim()}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-40 hover:bg-primary-dark transition-colors"
-        >
-          추가
-        </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
+      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-bold text-black/85 mb-4">서류 추가</h3>
+        <input
+          autoFocus
+          type="text"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && label.trim()) {
+              onAdd(label.trim());
+            }
+          }}
+          placeholder="서류 이름 입력 (예: 자격증 사본)"
+          className={INPUT_CLASS}
+        />
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-black/40 hover:bg-black/5 transition-colors"
+          >
+            취소
+          </button>
+          <button
+            onClick={() => label.trim() && onAdd(label.trim())}
+            disabled={!label.trim()}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-40 hover:bg-primary-dark transition-colors"
+          >
+            추가
+          </button>
+        </div>
       </div>
-    </ModalOverlay>
+    </div>
   );
 }
 
 const INPUT_CLASS =
   'w-full rounded-lg border border-black/10 bg-white px-4 py-3 text-[15px] text-black/80 placeholder:text-black/25 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors';
 
+function Toast({ message, subMessage, onClose }: { message: string; subMessage?: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 animate-[fadeInUp_0.3s_ease-out] rounded-xl bg-black/85 px-5 py-3 shadow-lg"
+      onClick={onClose}
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-[14px]">📋</span>
+        <span className="text-[14px] font-medium text-white">{message}</span>
+      </div>
+      {subMessage && (
+        <p className="mt-1 text-[12px] text-white/60 pl-6">{subMessage}</p>
+      )}
+    </div>
+  );
+}
+
 export default function UploadStep({ caseData, onNext }: UploadStepProps) {
   const setManualField = useCaseStore((s) => s.setManualField);
   const addCustomDocument = useCaseStore((s) => s.addCustomDocument);
 
-  const [addModalCategory, setAddModalCategory] = useState<'foreigner' | 'company' | null>(null);
+  const [addModalProvider, setAddModalProvider] = useState<DocumentProvider | null>(null);
+  const [toast, setToast] = useState<{ message: string; subMessage?: string } | null>(null);
+
+  const handleCopyLink = useCallback((providerId: string) => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const link = `${baseUrl}/submit/${caseData.id}/${providerId}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setToast({ message: '서류 요청 링크가 복사되었습니다' });
+      setTimeout(() => setToast(null), 2000);
+    });
+  }, [caseData.id]);
 
   const docsWithType = useMemo(
     () => resolveDocsWithType(caseData).filter((d) => d.docType.source === 'upload'),
     [caseData]
   );
+  const isD2 = caseData.visaType === 'D-2';
+  const providers = getProvidersForVisa(caseData.visaType);
 
-  const foreignerDocs = docsWithType.filter((d) => d.docType.category === 'foreigner');
-  const companyDocs = docsWithType.filter((d) => d.docType.category === 'company');
+  const handleCopyAllLinks = useCallback(() => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const activeProviders = providers.filter((p) => {
+      if (isD2 && p.id === 'd2-student') return false;
+      return p.docTypeIds.some((id) => docsWithType.some((d) => d.docType.id === id));
+    });
+    const links = activeProviders.map((p) => `[${p.label}] ${baseUrl}/submit/${caseData.id}/${p.id}`).join('\n');
+    navigator.clipboard.writeText(links).then(() => {
+      setToast({ message: '전체 서류 요청 링크가 복사되었습니다' });
+      setTimeout(() => setToast(null), 2000);
+    });
+  }, [caseData.id, providers, isD2, docsWithType]);
+
+  // Provider별로 문서를 그룹핑
+  const providerGroups = providers.map((provider) => {
+    const docs = docsWithType.filter((d) => {
+      // D-2의 학생 제출 서류 Provider는 StudentDocSection에서 별도 처리
+      if (isD2 && provider.id === 'd2-student') return false;
+      return provider.docTypeIds.includes(d.docType.id);
+    });
+    return { provider, docs };
+  });
+
+  // D-2: 학생 제출 서류 분리
+  const studentDocs = isD2
+    ? docsWithType.filter((d) => D2_STUDENT_DOC_IDS.includes(d.docType.id))
+    : [];
+
+  // Provider에 매핑되지 않은 문서 (커스텀 서류 등)
+  const allProviderDocIds = new Set(providers.flatMap((p) => p.docTypeIds));
+  const unmappedDocs = docsWithType.filter(
+    (d) => !allProviderDocIds.has(d.docType.id) && !(isD2 && D2_STUDENT_DOC_IDS.includes(d.docType.id))
+  );
 
   const doneUpload = docsWithType.filter((d) => d.caseDoc.file).length;
   const totalUpload = docsWithType.length;
   const hasAnyUpload = doneUpload > 0;
 
   const handleAddCustom = (label: string) => {
-    if (addModalCategory) {
-      addCustomDocument(caseData.id, label, addModalCategory);
-      setAddModalCategory(null);
+    if (addModalProvider) {
+      addCustomDocument(caseData.id, label, addModalProvider.defaultCategory);
+      setAddModalProvider(null);
     }
   };
 
   return (
     <div>
-      <div className="mb-8">
-        <h2 className="text-3xl font-extrabold tracking-tight text-black/90">
-          서류만 올리면,<br />
-          자동으로 공문서가 완성돼요
-        </h2>
-        <p className="mt-3 text-base text-black/45">
-          업로드한 서류에서 정보를 자동 추출해 신청서를 작성합니다
-        </p>
-      </div>
-
+      {/* Specialist info inputs */}
       {caseData.visaType === 'E-7' && (
         <div className="mb-6 rounded-xl bg-white border border-black/5 p-6 shadow-sm">
           <h3 className="mb-5 text-base font-bold tracking-tight text-black/75">전문인력 정보</h3>
@@ -291,6 +501,7 @@ export default function UploadStep({ caseData, onNext }: UploadStepProps) {
         </div>
       )}
 
+      {/* Upload status summary */}
       {doneUpload > 0 && (
         <div className="mb-4 flex items-center gap-2 px-1">
           <div className="h-2 w-2 rounded-full bg-primary" />
@@ -300,42 +511,88 @@ export default function UploadStep({ caseData, onNext }: UploadStepProps) {
         </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <CollapsibleSection
-          title="외국인 서류"
-          icon={
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0" />
-            </svg>
-          }
-          iconBg="bg-blue-50"
-          iconColor="text-blue-500"
-          docs={foreignerDocs}
-          caseId={caseData.id}
-          onAddCustom={() => setAddModalCategory('foreigner')}
-        />
+      {/* D-2: 학생 제출 서류 (full width) */}
+      {isD2 && studentDocs.length > 0 && (
+        <div className="mb-4">
+          <StudentDocSection docs={studentDocs} caseId={caseData.id} />
+        </div>
+      )}
 
-        <CollapsibleSection
-          title="사업체 서류"
-          icon={
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5M3.75 3v18m16.5-18v18M5.25 3h13.5M5.25 21V10.5m0 0h4.5m-4.5 0V3m13.5 7.5V3m0 7.5h-4.5m4.5 0V21" />
-            </svg>
-          }
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-500"
-          docs={companyDocs}
-          caseId={caseData.id}
-          onAddCustom={() => setAddModalCategory('company')}
-        />
+      {/* Common instruction for submit links */}
+      <div className="mb-4">
+        <span className="text-[14px] font-semibold text-[#6B7280]">
+          📨 서류 요청 링크 - 상대방에게 링크 전송만으로 편하게 서류를 업로드 받으세요
+        </span>
       </div>
 
-      <AddDocumentModal
-        isOpen={!!addModalCategory}
-        onAdd={handleAddCustom}
-        onClose={() => setAddModalCategory(null)}
-      />
+      {/* Provider-based document groups — horizontal grid */}
+      {(() => {
+        const activeGroups = providerGroups.filter(({ docs }) => docs.length > 0);
+        const totalColumns = activeGroups.length + (unmappedDocs.length > 0 ? 1 : 0);
+        const gridClass =
+          totalColumns === 1
+            ? 'grid grid-cols-1'
+            : totalColumns === 2
+              ? 'grid grid-cols-1 md:grid-cols-2'
+              : 'grid grid-cols-1 md:grid-cols-3';
+        return (
+          <div className={`${gridClass} gap-4 items-start`}>
+            {activeGroups.map(({ provider, docs }) => {
+              const styles = getProviderStyles(provider.color);
+              return (
+                <ProviderColumn
+                  key={provider.id}
+                  title={provider.label}
+                  icon={<ProviderIcon icon={provider.icon} />}
+                  iconBg={styles.iconBg}
+                  iconColor={styles.iconColor}
+                  docs={docs}
+                  caseId={caseData.id}
+                  providerId={provider.id}
+                  onAddCustom={() => setAddModalProvider(provider)}
+                  onCopyLink={handleCopyLink}
+                />
+              );
+            })}
 
+            {/* Provider에 매핑되지 않은 커스텀 서류 */}
+            {unmappedDocs.length > 0 && (
+              <ProviderColumn
+                title="기타 서류"
+                icon={
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                  </svg>
+                }
+                iconBg="bg-slate-100"
+                iconColor="text-slate-500"
+                docs={unmappedDocs}
+                caseId={caseData.id}
+                providerId="etc"
+                onAddCustom={() => setAddModalProvider(providers[0] ?? {
+                  id: 'fallback',
+                  label: '기타',
+                  icon: 'briefcase' as ProviderIcon,
+                  color: 'slate' as const,
+                  defaultCategory: 'foreigner' as const,
+                  docTypeIds: [],
+                })}
+                onCopyLink={handleCopyLink}
+              />
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Add document modal */}
+      {addModalProvider && (
+        <AddDocumentModal
+          onAdd={handleAddCustom}
+          onClose={() => setAddModalProvider(null)}
+        />
+      )}
+
+      {/* Next button */}
       <div className="mt-8 flex items-center justify-between">
         {!hasAnyUpload && (
           <span className="text-sm text-black/30">
@@ -363,6 +620,16 @@ export default function UploadStep({ caseData, onNext }: UploadStepProps) {
           </button>
         </div>
       </div>
+
+      {/* Footer notice */}
+      <p className="mt-6 text-center text-[13px] text-black/30">
+        ※ 업로드된 서류에서 정보를 자동 추출해 신청서를 작성합니다
+      </p>
+
+      {/* Toast message */}
+      {toast && (
+        <Toast message={toast.message} subMessage={toast.subMessage} onClose={() => setToast(null)} />
+      )}
     </div>
   );
 }

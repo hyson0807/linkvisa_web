@@ -52,6 +52,11 @@ export interface ManualFieldDef {
   halfWidth?: boolean;
 }
 
+export interface StudentSubmission {
+  submittedAt: string;
+  fields: Record<string, string>;
+}
+
 export interface Case {
   id: string;
   foreignerName: string;
@@ -62,6 +67,8 @@ export interface Case {
   documents: CaseDocument[];
   manualFields: Record<string, string>;
   customDocTypes?: DocumentTypeDef[];
+  studentLinkToken?: string;
+  studentSubmission?: StudentSubmission;
   createdAt: string;
 }
 

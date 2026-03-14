@@ -9,6 +9,8 @@ interface StepApplicationTypeProps {
 }
 
 export default function StepApplicationType({ value, onSelect }: StepApplicationTypeProps) {
+  const badgeTexts = ['가장 많이 처리', '자주 진행', '신규 비자'];
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-black/90">
@@ -21,18 +23,27 @@ export default function StepApplicationType({ value, onSelect }: StepApplication
       <div className="mt-8 flex flex-col gap-3">
         {applicationTypes.map((type, i) => {
           const isSelected = value === type.id;
+          const isHighlighted = i < 3;
+
           return (
             <button
               key={type.id}
               onClick={() => onSelect(type.id as ApplicationType)}
-              className={`rounded-2xl border px-5 py-4 text-left transition-all duration-200 ${
+              className={`relative h-16 rounded-xl border px-5 text-left transition-all duration-200 ${
                 isSelected
                   ? 'border-primary/60 bg-[#EBF4FF] shadow-sm'
-                  : 'border-black/[0.06] bg-white hover:border-black/[0.12] hover:shadow-md'
+                  : isHighlighted
+                    ? 'border-2 border-[#4F6DF5] bg-white hover:border-[#3B5BDB]'
+                    : 'border-black/[0.06] bg-white hover:border-black/[0.12] hover:shadow-md'
               }`}
               style={{ animation: `fadeInUp 0.4s ease-out ${i * 50}ms both` }}
             >
-              <div className="flex items-center gap-3">
+              {isHighlighted && (
+                <span className="absolute right-[14px] top-[10px] rounded-md bg-[#EEF2FF] px-2 py-1 text-[11px] font-semibold text-[#3B5BDB]">
+                  {badgeTexts[i]}
+                </span>
+              )}
+              <div className="flex h-full items-center gap-3">
                 <div
                   className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-200 ${
                     isSelected ? 'border-primary bg-primary' : 'border-black/20'
@@ -44,7 +55,7 @@ export default function StepApplicationType({ value, onSelect }: StepApplication
                     </svg>
                   )}
                 </div>
-                <span className={`text-[17px] font-semibold ${isSelected ? 'text-primary' : 'text-black/70'}`}>
+                <span className={`text-[16px] font-medium ${isSelected ? 'text-primary' : 'text-black/70'}`}>
                   {type.label}
                 </span>
               </div>

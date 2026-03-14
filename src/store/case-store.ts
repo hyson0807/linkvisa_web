@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { ApplicationType, Case, CaseDocument, CaseStatus, DocumentTypeDef, FileHandle } from '@/types/case';
+import type { ApplicationType, Case, CaseDocument, CaseStatus, DocumentTypeDef, FileHandle, StudentSubmission } from '@/types/case';
 import { getDocumentsForVisa } from '@/lib/document-registry';
 import { getDefaultValues } from '@/lib/manual-field-registry';
 import { idbStorage } from '@/lib/idb-storage';
@@ -21,6 +21,9 @@ interface CaseStore {
   setAiContent: (caseId: string, documentId: string, content: string) => void;
   updateDocumentStatus: (caseId: string, documentId: string, status: CaseDocument['status']) => void;
   deleteCase: (id: string) => void;
+
+  getCaseByToken: (token: string) => Case | undefined;
+  submitStudentData: (token: string, fields: Record<string, string>, documents: { docTypeId: string; file: FileHandle }[]) => boolean;
 }
 
 export const useCaseStore = create<CaseStore>()(
@@ -37,6 +40,11 @@ export const useCaseStore = create<CaseStore>()(
           status: 'pending',
         }));
 
+        // D-2 비자의 경우 학생 제출 링크 토큰 자동 생성
+        const studentLinkToken = visaType === 'D-2'
+          ? `stud-${id}-${Math.random().toString(36).slice(2, 8)}`
+          : undefined;
+
         const newCase: Case = {
           id,
           foreignerName,
@@ -46,6 +54,7 @@ export const useCaseStore = create<CaseStore>()(
           status: 'documents-pending',
           documents,
           manualFields: getDefaultValues(visaType),
+          studentLinkToken,
           createdAt: new Date().toISOString(),
         };
 
@@ -167,6 +176,45 @@ export const useCaseStore = create<CaseStore>()(
         set((state) => ({
           cases: state.cases.filter((c) => c.id !== id),
         })),
+
+      getCaseByToken: (token) =>
+        get().cases.find((c) => c.studentLinkToken === token),
+
+      submitStudentData: (token, fields, documents) => {
+        const caseData = get().cases.find((c) => c.studentLinkToken === token);
+        if (!caseData) return false;
+
+        const submission: StudentSubmission = {
+          submittedAt: new Date().toISOString(),
+          fields,
+        };
+
+        set((state) => ({
+          cases: state.cases.map((c) => {
+            if (c.studentLinkToken !== token) return c;
+
+            // 학생 제출 서류 업데이트
+            let updatedDocs = [...c.documents];
+            for (const doc of documents) {
+              updatedDocs = updatedDocs.map((d) =>
+                d.typeId === doc.docTypeId
+                  ? { ...d, file: doc.file, status: 'uploaded' as const }
+                  : d
+              );
+            }
+
+            // 학생 입력 필드를 manualFields에 병합
+            return {
+              ...c,
+              documents: updatedDocs,
+              manualFields: { ...c.manualFields, ...fields },
+              studentSubmission: submission,
+            };
+          }),
+        }));
+
+        return true;
+      },
     }),
     {
       name: 'linkvisa-cases',

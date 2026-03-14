@@ -8,6 +8,7 @@ import UploadStep from './_components/step1-upload/UploadStep';
 import ReviewStep from './_components/step2-review/ReviewStep';
 import ManualInputStep from './_components/step3-manual/ManualInputStep';
 import OutputStep from './_components/step4-output/OutputStep';
+import StudentLinkPanel from './_components/StudentLinkPanel';
 import { useCaseStore } from '@/store/case-store';
 import { visaTypes } from '@/lib/document-registry';
 
@@ -32,33 +33,25 @@ export default function CaseWorkspacePage({ params }: { params: Promise<{ id: st
   return (
     <div className="min-h-screen bg-[#fafafa]">
       <CasesAppHeader />
-      <main className="mx-auto max-w-4xl px-6 py-8">
-        {/* Case header */}
-        <div className="mb-6 flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-lg font-bold text-primary">
-            {caseData.foreignerName.charAt(0)}
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-black/80">
-              {caseData.foreignerName}
-              <span className="ml-2 text-sm font-normal text-black/40">· {caseData.companyName}</span>
-            </h1>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                {caseData.visaType}
-              </span>
-              {visaLabel && (
-                <span className="text-xs text-black/30">{visaLabel.label} · {visaLabel.desc}</span>
-              )}
-            </div>
-          </div>
+      <main className="mx-auto max-w-4xl px-6 py-4">
+        {/* Unified header: case info + step indicator */}
+        <div className="mb-4 flex h-12 items-center justify-between">
+          {/* Left: Case info */}
+          <span className="text-[14px] font-medium text-[#6B7280]">
+            {caseData.visaType === 'D-2' ? caseData.companyName : caseData.foreignerName} · {caseData.visaType}
+          </span>
+
+          {/* Right: Step indicator inline */}
+          <StepIndicator
+            currentStep={step}
+            onStepClick={(s) => setStep(s)}
+          />
         </div>
 
-        {/* Step indicator */}
-        <StepIndicator
-          currentStep={step}
-          onStepClick={(s) => setStep(s)}
-        />
+        {/* D-2: 학생 서류 제출 링크 */}
+        {caseData.visaType === 'D-2' && (
+          <StudentLinkPanel caseData={caseData} />
+        )}
 
         {/* Step content */}
         {step === 'upload' && (
