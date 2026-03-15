@@ -172,7 +172,7 @@ function DocumentSlot({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[17px] font-semibold text-black/85 leading-snug">
+          <div className="truncate text-[17px] font-semibold text-black/85 leading-snug">
             {(() => {
               const m = docType.label.match(/^(.+?)\s*(\(.+\))$/);
               if (m) return <>{m[1]}<br /><span className="text-[15px] font-medium text-black/45">{m[2]}</span></>;
@@ -181,7 +181,7 @@ function DocumentSlot({
           </div>
           {hasFile && lastFile && (
             <div className="flex items-center gap-1.5 text-sm text-primary/70">
-              <span>{lastFile.name} ({formatFileSize(lastFile.size)})</span>
+              <span className="truncate">{lastFile.name} ({formatFileSize(lastFile.size)})</span>
             </div>
           )}
         </div>
@@ -189,7 +189,7 @@ function DocumentSlot({
           <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary">완료</span>
         )}
         {/* Edit/Remove file buttons — visible on hover */}
-        <div className="flex shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 bg-white/90 rounded-lg px-1 transition-opacity">
           <button
             onClick={(e) => { e.stopPropagation(); onEditLabel(caseDoc.id, docType.label); }}
             className="rounded-lg p-1.5 text-black/25 hover:bg-black/5 hover:text-black/50 transition-colors"
