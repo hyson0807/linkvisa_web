@@ -60,6 +60,12 @@ export interface StudentSubmission {
   fields: Record<string, string>;
 }
 
+export interface ShareLinkInfo {
+  token: string;
+  expiresAt: string;
+  isActive: boolean;
+}
+
 export interface Case {
   id: string;
   foreignerName: string;
@@ -72,6 +78,7 @@ export interface Case {
   customDocTypes?: DocumentTypeDef[];
   studentLinkToken?: string;
   studentSubmission?: StudentSubmission;
+  shareLinks?: Record<string, ShareLinkInfo>;
   createdAt: string;
 }
 

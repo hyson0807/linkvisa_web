@@ -74,4 +74,10 @@ export const caseApi = {
       method: 'POST',
       body: JSON.stringify({ label, category }),
     }),
+
+  createShareLink: (caseId: string, providerId: string) =>
+    api<{ token: string; expiresAt: string; isActive: boolean }>('/api/share-links', {
+      method: 'POST',
+      body: JSON.stringify({ caseId, providerId }),
+    }),
 };

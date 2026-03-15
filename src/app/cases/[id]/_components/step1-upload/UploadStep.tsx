@@ -237,6 +237,7 @@ function ProviderColumn({
   docs,
   caseId,
   providerId,
+  shareToken,
   onAddCustom,
   onCopyLink,
   onDeleteDoc,
@@ -249,6 +250,7 @@ function ProviderColumn({
   docs: DocWithType[];
   caseId: string;
   providerId: string;
+  shareToken?: string;
   onAddCustom: () => void;
   onCopyLink: (providerId: string) => void;
   onDeleteDoc: (docId: string) => void;
@@ -263,9 +265,9 @@ function ProviderColumn({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const linkUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/submit/${caseId}/${providerId}`
-    : `/submit/${caseId}/${providerId}`;
+  const linkUrl = shareToken
+    ? (typeof window !== 'undefined' ? `${window.location.origin}/submit/${shareToken}` : `/submit/${shareToken}`)
+    : `링크 복사 버튼을 눌러주세요`;
 
   return (
     <div className="flex h-full flex-col">
@@ -473,14 +475,25 @@ export default function UploadStep({ caseData, onNext }: UploadStepProps) {
   const [editingDoc, setEditingDoc] = useState<{ id: string; label: string } | null>(null);
   const [toast, setToast] = useState<{ message: string; subMessage?: string } | null>(null);
 
-  const handleCopyLink = useCallback((providerId: string) => {
+  const createShareLink = useCaseStore((s) => s.createShareLink);
+
+  const handleCopyLink = useCallback(async (providerId: string) => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const link = `${baseUrl}/submit/${caseData.id}/${providerId}`;
-    navigator.clipboard.writeText(link).then(() => {
+    try {
+      let token = caseData.shareLinks?.[providerId]?.token;
+      if (!token) {
+        const result = await createShareLink(caseData.id, providerId);
+        token = result.token;
+      }
+      const link = `${baseUrl}/submit/${token}`;
+      await navigator.clipboard.writeText(link);
       setToast({ message: '서류 요청 링크가 복사되었습니다' });
       setTimeout(() => setToast(null), 2000);
-    });
-  }, [caseData.id]);
+    } catch {
+      setToast({ message: '링크 생성에 실패했습니다' });
+      setTimeout(() => setToast(null), 2000);
+    }
+  }, [caseData.id, caseData.shareLinks, createShareLink]);
 
   const docsWithType = useMemo(
     () => resolveDocsWithType(caseData).filter((d) => d.docType.source === 'upload'),
@@ -489,18 +502,31 @@ export default function UploadStep({ caseData, onNext }: UploadStepProps) {
   const isD2 = caseData.visaType === 'D-2';
   const providers = getProvidersForVisa(caseData.visaType);
 
-  const handleCopyAllLinks = useCallback(() => {
+  const handleCopyAllLinks = useCallback(async () => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
     const activeProviders = providers.filter((p) => {
       if (isD2 && p.id === 'd2-student') return false;
       return p.docTypeIds.some((id) => docsWithType.some((d) => d.docType.id === id));
     });
-    const links = activeProviders.map((p) => `[${p.label}] ${baseUrl}/submit/${caseData.id}/${p.id}`).join('\n');
-    navigator.clipboard.writeText(links).then(() => {
+    try {
+      const lines = await Promise.all(
+        activeProviders.map(async (p) => {
+          let token = caseData.shareLinks?.[p.id]?.token;
+          if (!token) {
+            const result = await createShareLink(caseData.id, p.id);
+            token = result.token;
+          }
+          return `[${p.label}] ${baseUrl}/submit/${token}`;
+        }),
+      );
+      await navigator.clipboard.writeText(lines.join('\n'));
       setToast({ message: '전체 서류 요청 링크가 복사되었습니다' });
       setTimeout(() => setToast(null), 2000);
-    });
-  }, [caseData.id, providers, isD2, docsWithType]);
+    } catch {
+      setToast({ message: '링크 생성에 실패했습니다' });
+      setTimeout(() => setToast(null), 2000);
+    }
+  }, [caseData.id, caseData.shareLinks, providers, isD2, docsWithType, createShareLink]);
 
   // Provider별로 문서를 그룹핑
   const providerGroups = providers.map((provider) => {
@@ -643,6 +669,7 @@ export default function UploadStep({ caseData, onNext }: UploadStepProps) {
                   docs={docs}
                   caseId={caseData.id}
                   providerId={provider.id}
+                  shareToken={caseData.shareLinks?.[provider.id]?.token}
                   onAddCustom={() => setAddModalProvider(provider)}
                   onCopyLink={handleCopyLink}
                   onDeleteDoc={handleDeleteDoc}

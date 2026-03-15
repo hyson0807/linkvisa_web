@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ApplicationType, Case, CaseDocument, CaseStatus, FileHandle } from '@/types/case';
+import type { ApplicationType, Case, CaseDocument, CaseStatus, FileHandle, ShareLinkInfo } from '@/types/case';
 import { caseApi } from '@/lib/case-api';
 import { getSessionToken } from '@/lib/session-token';
 
@@ -27,6 +27,29 @@ interface CaseStore {
   setAiContent: (caseId: string, documentId: string, content: string) => void;
   updateDocumentStatus: (caseId: string, documentId: string, status: CaseDocument['status']) => void;
   deleteCase: (id: string) => Promise<void>;
+  createShareLink: (caseId: string, providerId: string) => Promise<ShareLinkInfo>;
+}
+
+function mapShareLinks(
+  raw: unknown,
+): Record<string, ShareLinkInfo> | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const now = new Date();
+  const result: Record<string, ShareLinkInfo> = {};
+  for (const item of raw) {
+    const r = item as Record<string, unknown>;
+    const type = r.type as string;
+    const isActive = r.isActive as boolean;
+    const expiresAt = r.expiresAt as string;
+    if (isActive && new Date(expiresAt) > now) {
+      result[type] = {
+        token: r.token as string,
+        expiresAt,
+        isActive,
+      };
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 function mapServerCase(raw: Record<string, unknown>): Case {
@@ -55,6 +78,7 @@ function mapServerCase(raw: Record<string, unknown>): Case {
       customCategory: d.customCategory as string | undefined,
     })),
     manualFields: (raw.manualFields as Record<string, string>) ?? {},
+    shareLinks: mapShareLinks(raw.shareLinks),
     createdAt: raw.createdAt as string,
   };
 }
@@ -280,5 +304,23 @@ export const useCaseStore = create<CaseStore>()((set, get) => ({
     set((state) => ({
       cases: state.cases.filter((c) => c.id !== id),
     }));
+  },
+
+  createShareLink: async (caseId, providerId) => {
+    const result = await caseApi.createShareLink(caseId, providerId);
+    set((state) => ({
+      cases: state.cases.map((c) =>
+        c.id === caseId
+          ? {
+              ...c,
+              shareLinks: {
+                ...(c.shareLinks ?? {}),
+                [providerId]: result,
+              },
+            }
+          : c
+      ),
+    }));
+    return result;
   },
 }));
