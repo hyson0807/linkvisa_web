@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useCaseStore } from '@/store/case-store';
 import { resolveDocsWithType } from '@/lib/document-registry';
-import { readFileAsDataUrl, formatFileSize } from '@/lib/file-utils';
+import { formatFileSize } from '@/lib/file-utils';
 import { D2_STUDENT_DOC_IDS } from '@/lib/document-registry';
 import {
   getProvidersForVisa,
@@ -11,6 +11,7 @@ import {
   getProviderStyles,
 } from '@/lib/provider-registry';
 import type { DocumentProvider, ProviderIcon } from '@/lib/provider-registry';
+import { hasFiles, latestFile } from '@/types/case';
 import type { Case, DocWithType, DocumentTypeDef, CaseDocument } from '@/types/case';
 
 interface UploadStepProps {
@@ -81,27 +82,39 @@ function DocumentSlot({
   caseId: string;
 }) {
   const uploadFile = useCaseStore((s) => s.uploadFile);
-  const hasFile = !!caseDoc.file;
+  const [uploading, setUploading] = useState(false);
+  const hasFile = hasFiles(caseDoc);
+  const lastFile = latestFile(caseDoc);
+
+  const handleUpload = useCallback(
+    async (file: File) => {
+      setUploading(true);
+      try {
+        await uploadFile(caseId, caseDoc.id, file);
+      } finally {
+        setUploading(false);
+      }
+    },
+    [caseId, caseDoc.id, uploadFile]
+  );
 
   const handleDrop = useCallback(
     async (e: React.DragEvent) => {
       e.preventDefault();
       const file = e.dataTransfer.files[0];
       if (!file) return;
-      const handle = await readFileAsDataUrl(file);
-      uploadFile(caseId, caseDoc.id, handle);
+      await handleUpload(file);
     },
-    [caseId, caseDoc.id, uploadFile]
+    [handleUpload]
   );
 
   const handleFileSelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      const handle = await readFileAsDataUrl(file);
-      uploadFile(caseId, caseDoc.id, handle);
+      await handleUpload(file);
     },
-    [caseId, caseDoc.id, uploadFile]
+    [handleUpload]
   );
 
   return (
@@ -109,18 +122,22 @@ function DocumentSlot({
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
       className={`group relative rounded-xl border-2 border-dashed p-4 transition-all ${
-        hasFile
-          ? 'border-primary/30 bg-primary/3'
-          : 'border-black/10 bg-white hover:border-primary/30 hover:bg-primary/2'
+        uploading
+          ? 'border-primary/40 bg-primary/5'
+          : hasFile
+            ? 'border-primary/30 bg-primary/3'
+            : 'border-black/10 bg-white hover:border-primary/30 hover:bg-primary/2'
       }`}
     >
       <div className="flex items-center gap-3">
         <div
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-            hasFile ? 'bg-primary/10 text-primary' : 'bg-black/5 text-black/30'
+            uploading || hasFile ? 'bg-primary/10 text-primary' : 'bg-black/5 text-black/30'
           }`}
         >
-          {hasFile ? (
+          {uploading ? (
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          ) : hasFile ? (
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
@@ -142,9 +159,9 @@ function DocumentSlot({
               return docType.label;
             })()}
           </div>
-          {hasFile && caseDoc.file && (
+          {hasFile && lastFile && (
             <div className="text-sm text-primary/70">
-              {caseDoc.file.name} ({formatFileSize(caseDoc.file.size)})
+              {lastFile.name} ({formatFileSize(lastFile.size)})
             </div>
           )}
         </div>
@@ -191,7 +208,7 @@ function ProviderColumn({
   onCopyLink: (providerId: string) => void;
 }) {
   const [copied, setCopied] = useState(false);
-  const doneCount = docs.filter((d) => d.caseDoc.file).length;
+  const doneCount = docs.filter((d) => hasFiles(d.caseDoc)).length;
 
   const handleCopy = () => {
     onCopyLink(providerId);
@@ -285,21 +302,24 @@ function StudentDocSection({ docs, caseId }: { docs: DocWithType[]; caseId: stri
         </div>
         <h3 className="text-[15px] font-bold text-black/70">학생 제출 서류</h3>
         <span className="ml-auto mr-2 text-sm text-black/30">
-          {docs.filter((d) => d.caseDoc.file).length}/{docs.length}
+          {docs.filter((d) => hasFiles(d.caseDoc)).length}/{docs.length}
         </span>
       </div>
       <div className="space-y-3 px-5 pb-5">
-        {docs.map(({ caseDoc, docType }) => (
+        {docs.map(({ caseDoc, docType }) => {
+          const docHasFiles = hasFiles(caseDoc);
+          const lastFile = latestFile(caseDoc);
+          return (
           <div key={caseDoc.id} className={`rounded-xl border p-4 ${
-            caseDoc.file
+            docHasFiles
               ? 'border-green-200 bg-green-50/50'
               : 'border-black/8 bg-black/[0.02]'
           }`}>
             <div className="flex items-center gap-3">
               <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                caseDoc.file ? 'bg-green-100 text-green-600' : 'bg-black/5 text-black/25'
+                docHasFiles ? 'bg-green-100 text-green-600' : 'bg-black/5 text-black/25'
               }`}>
-                {caseDoc.file ? (
+                {docHasFiles ? (
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
@@ -312,15 +332,16 @@ function StudentDocSection({ docs, caseId }: { docs: DocWithType[]; caseId: stri
               <div className="min-w-0 flex-1">
                 <div className="text-[15px] font-semibold text-black/80">{docType.label}</div>
                 <div className="text-sm text-black/35">
-                  {caseDoc.file ? `${caseDoc.file.name} (${formatFileSize(caseDoc.file.size)})` : '학생 제출 대기'}
+                  {docHasFiles && lastFile ? `${lastFile.name} (${formatFileSize(lastFile.size)})` : '학생 제출 대기'}
                 </div>
               </div>
-              {caseDoc.file && (
+              {docHasFiles && (
                 <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-600">제출됨</span>
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -449,13 +470,13 @@ export default function UploadStep({ caseData, onNext }: UploadStepProps) {
     (d) => !allProviderDocIds.has(d.docType.id) && !(isD2 && D2_STUDENT_DOC_IDS.includes(d.docType.id))
   );
 
-  const doneUpload = docsWithType.filter((d) => d.caseDoc.file).length;
+  const doneUpload = docsWithType.filter((d) => hasFiles(d.caseDoc)).length;
   const totalUpload = docsWithType.length;
   const hasAnyUpload = doneUpload > 0;
 
-  const handleAddCustom = (label: string) => {
+  const handleAddCustom = async (label: string) => {
     if (addModalProvider) {
-      addCustomDocument(caseData.id, label, addModalProvider.defaultCategory);
+      await addCustomDocument(caseData.id, label, addModalProvider.defaultCategory);
       setAddModalProvider(null);
     }
   };

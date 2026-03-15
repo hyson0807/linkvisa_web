@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useCaseStore } from '@/store/case-store';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import AppHeader from './_components/AppHeader';
@@ -10,9 +11,17 @@ import CaseCard from './_components/CaseCard';
 export default function DashboardPage() {
   const { user, isLoading } = useRequireAuth();
   const cases = useCaseStore((s) => s.cases);
+  const fetchCases = useCaseStore((s) => s.fetchCases);
   const deleteCase = useCaseStore((s) => s.deleteCase);
+  const loading = useCaseStore((s) => s.loading);
 
-  if (isLoading || !user) {
+  useEffect(() => {
+    if (user) {
+      fetchCases();
+    }
+  }, [user, fetchCases]);
+
+  if (isLoading || !user || loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />

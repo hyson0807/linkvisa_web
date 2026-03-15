@@ -1,3 +1,5 @@
+import { getSessionToken } from './session-token';
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -12,12 +14,23 @@ export async function api<T = unknown>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+
+  const headers: Record<string, string> = {
+    ...(options.body && !isFormData ? { "Content-Type": "application/json" } : {}),
+    "X-Requested-With": "XMLHttpRequest",
+  };
+
+  // Only send session token when it already exists (don't create one for authenticated users)
+  if (typeof window !== 'undefined' && localStorage.getItem('linkvisa-session-token')) {
+    headers["X-Session-Token"] = getSessionToken();
+  }
+
   const res = await fetch(path, {
     ...options,
     credentials: "include",
     headers: {
-      ...(options.body && { "Content-Type": "application/json" }),
-      "X-Requested-With": "XMLHttpRequest",
+      ...headers,
       ...options.headers,
     },
   });

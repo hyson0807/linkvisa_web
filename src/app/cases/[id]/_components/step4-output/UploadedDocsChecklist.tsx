@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { hasFiles } from '@/types/case';
 import type { DocWithType } from '@/types/case';
 
 interface UploadedDocsChecklistProps {
@@ -8,7 +9,7 @@ interface UploadedDocsChecklistProps {
 }
 
 function isDocDone(d: DocWithType): boolean {
-  return !!d.caseDoc.file || d.caseDoc.status === 'ocr-complete' || d.caseDoc.status === 'complete';
+  return hasFiles(d.caseDoc) || d.caseDoc.status === 'ocr-complete' || d.caseDoc.status === 'complete';
 }
 
 function DocGroup({ heading, docs }: { heading: string; docs: DocWithType[] }) {

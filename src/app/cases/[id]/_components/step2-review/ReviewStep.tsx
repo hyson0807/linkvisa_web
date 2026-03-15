@@ -6,6 +6,7 @@ import { resolveDocsWithType } from '@/lib/document-registry';
 import { runMockOcr } from '@/lib/mock-ocr';
 import { runMockAiGenerate } from '@/lib/mock-ai-generate';
 import AutoFillShowcase from './AutoFillShowcase';
+import { hasFiles } from '@/types/case';
 import type { Case } from '@/types/case';
 
 interface ReviewStepProps {
@@ -22,7 +23,7 @@ function useDocsWithType(caseData: Case) {
   );
   const formGenDocs = all.filter((d) => d.docType.source === 'form-generate');
   const aiDocs = all.filter((d) => d.docType.source === 'ai-generate');
-  const hasAnyUpload = all.some((d) => d.docType.source === 'upload' && d.caseDoc.file);
+  const hasAnyUpload = all.some((d) => d.docType.source === 'upload' && hasFiles(d.caseDoc));
 
   return { ocrDocs, formGenDocs, aiDocs, hasAnyUpload };
 }
@@ -42,7 +43,7 @@ export default function ReviewStep({ caseData, onNext, onPrev }: ReviewStepProps
     const manualFields = caseData.manualFields;
 
     (async () => {
-      for (const d of ocrDocs.filter((d) => !d.caseDoc.ocrResult && d.caseDoc.file)) {
+      for (const d of ocrDocs.filter((d) => !d.caseDoc.ocrResult && hasFiles(d.caseDoc))) {
         const result = await runMockOcr(d.docType.id);
         setOcrResult(caseId, d.caseDoc.id, result);
         await new Promise((r) => setTimeout(r, 400));

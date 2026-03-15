@@ -24,19 +24,22 @@ export interface DocumentTypeDef {
 }
 
 export interface FileHandle {
+  id: string;
   name: string;
   size: number;
   type: string;
-  dataUrl: string;
 }
 
 export interface CaseDocument {
   id: string;
   typeId: string;
   status: DocumentStatus;
-  file?: FileHandle;
+  files?: FileHandle[];
   ocrResult?: Record<string, string>;
   aiContent?: string;
+  isCustom?: boolean;
+  customLabel?: string;
+  customCategory?: string;
 }
 
 export interface ManualFieldDef {
@@ -73,3 +76,11 @@ export interface Case {
 }
 
 export type DocWithType = { caseDoc: CaseDocument; docType: DocumentTypeDef };
+
+export function hasFiles(doc: CaseDocument): boolean {
+  return !!(doc.files && doc.files.length > 0);
+}
+
+export function latestFile(doc: CaseDocument): FileHandle | undefined {
+  return doc.files?.[doc.files.length - 1];
+}

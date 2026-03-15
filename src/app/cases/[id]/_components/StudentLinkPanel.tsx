@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { hasFiles } from '@/types/case';
 import type { Case } from '@/types/case';
 import { D2_STUDENT_FIELDS, D2_STUDENT_DOC_IDS, getStudentDocuments } from '@/lib/document-registry';
 
@@ -18,7 +19,7 @@ export default function StudentLinkPanel({ caseData }: StudentLinkPanelProps) {
 
   const studentDocs = getStudentDocuments();
   const uploadedStudentDocs = caseData.documents.filter(
-    (d) => D2_STUDENT_DOC_IDS.includes(d.typeId) && d.file
+    (d) => D2_STUDENT_DOC_IDS.includes(d.typeId) && hasFiles(d)
   );
 
   const handleCopy = async () => {

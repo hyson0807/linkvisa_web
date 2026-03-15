@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import CasesAppHeader from '../_components/AppHeader';
 import StepIndicator from './_components/shared/StepIndicator';
 import type { WizardStep } from './_components/shared/StepIndicator';
@@ -14,8 +14,25 @@ import { visaTypes } from '@/lib/document-registry';
 
 export default function CaseWorkspacePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const fetchCase = useCaseStore((s) => s.fetchCase);
   const caseData = useCaseStore((s) => s.getCase(id));
   const [step, setStep] = useState<WizardStep>('upload');
+  const [loading, setLoading] = useState(!caseData);
+
+  useEffect(() => {
+    fetchCase(id).finally(() => setLoading(false));
+  }, [id, fetchCase]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#fafafa]">
+        <CasesAppHeader />
+        <main className="mx-auto max-w-4xl px-6 py-10 flex justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </main>
+      </div>
+    );
+  }
 
   if (!caseData) {
     return (

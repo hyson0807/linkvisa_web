@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCaseStore } from '@/store/case-store';
 import { visaEntityConfig, visaTypes } from '@/lib/document-registry';
@@ -12,7 +12,6 @@ import StepForeignerName from './StepForeignerName';
 import StepEntityName from './StepEntityName';
 
 function getBaseVisaCode(code: string): string {
-  // E-7-1 → E-7, F-2-7 → F-2, etc.
   const parts = code.split('-');
   return parts.length >= 2 ? `${parts[0]}-${parts[1]}` : code;
 }
@@ -36,10 +35,8 @@ export default function NewCaseWizard() {
   const [visaType, setVisaType] = useState('');
   const [foreignerName, setForeignerName] = useState('');
   const [entityName, setEntityName] = useState('');
+  const creatingRef = useRef(false);
 
-  // D-2: 3단계 (신청유형 → 비자 → 학교명)
-  // Entity 있는 비자: 4단계 (신청유형 → 비자 → 외국인명 → 사업체/학교명)
-  // Entity 없는 비자: 3단계 (신청유형 → 비자 → 외국인명)
   const isD2 = visaType ? isD2Visa(visaType) : false;
   const totalSteps = isD2 ? 3 : (visaType && needsEntityStep(visaType) ? 4 : 3);
 
@@ -63,25 +60,28 @@ export default function NewCaseWizard() {
     setTimeout(() => goForward(), 300);
   }, [goForward]);
 
-  // D-2: 학교명 입력 후 바로 케이스 생성 (외국인명은 학생이 링크로 입력)
-  const handleD2CreateCase = useCallback(() => {
-    if (!entityName.trim() || !visaType) return;
+  const handleCreate = useCallback(async (name: string, company: string) => {
+    if (!visaType || creatingRef.current) return;
+    creatingRef.current = true;
+    try {
+      const baseVisa = getBaseVisaCode(visaType);
+      const id = await createCase(name, company, baseVisa, applicationType ?? undefined);
+      router.push(`/cases/${id}`);
+    } catch {
+      creatingRef.current = false;
+    }
+  }, [visaType, applicationType, createCase, router]);
 
-    const baseVisa = getBaseVisaCode(visaType);
-    const id = createCase('', entityName.trim(), baseVisa, applicationType ?? undefined);
-    router.push(`/cases/${id}`);
-  }, [entityName, visaType, applicationType, createCase, router]);
+  const handleD2CreateCase = useCallback(() => {
+    if (!entityName.trim()) return;
+    handleCreate('', entityName.trim());
+  }, [entityName, handleCreate]);
 
   const handleCreateCase = useCallback(() => {
-    if (!foreignerName.trim() || !visaType) return;
+    if (!foreignerName.trim()) return;
+    handleCreate(foreignerName.trim(), entityName.trim() || '');
+  }, [foreignerName, entityName, handleCreate]);
 
-    const baseVisa = getBaseVisaCode(visaType);
-    const companyName = entityName.trim() || '';
-    const id = createCase(foreignerName.trim(), companyName, baseVisa, applicationType ?? undefined);
-    router.push(`/cases/${id}`);
-  }, [foreignerName, visaType, entityName, applicationType, createCase, router]);
-
-  // Determine if Step 3 should show submit (when no entity step needed)
   const showSubmitOnNameStep = visaType ? !needsEntityStep(visaType) : false;
 
   const handleNameNext = useCallback(() => {
@@ -103,7 +103,6 @@ export default function NewCaseWizard() {
         <StepVisaType value={visaType} onSelect={handleVisaSelect} />
       )}
 
-      {/* D-2: 3단계에서 학교명 입력 후 바로 생성 */}
       {step === 3 && isD2 && entityConfig && (
         <StepEntityName
           label={entityConfig.label}
@@ -114,7 +113,6 @@ export default function NewCaseWizard() {
         />
       )}
 
-      {/* 일반 비자: 3단계 외국인명 */}
       {step === 3 && !isD2 && (
         <StepForeignerName
           value={foreignerName}
@@ -125,7 +123,6 @@ export default function NewCaseWizard() {
         />
       )}
 
-      {/* 일반 비자: 4단계 사업체/배우자명 */}
       {step === 4 && !isD2 && entityConfig && (
         <StepEntityName
           label={entityConfig.label}
