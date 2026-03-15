@@ -35,7 +35,8 @@ export const caseApi = {
 
   uploadFile: (caseId: string, docId: string, file: File) => {
     const formData = new FormData();
-    formData.append('file', file);
+    // Explicitly pass the filename to preserve non-ASCII characters (e.g. Korean)
+    formData.append('file', file, file.name);
     return api<{ id: string; fileName: string; fileSize: number }>(
       `/api/cases/${caseId}/documents/${docId}/upload`,
       { method: 'POST', body: formData },
@@ -51,6 +52,18 @@ export const caseApi = {
     api<{ id: string; fileName: string; fileSize: number }[]>(
       `/api/cases/${caseId}/documents/${docId}/files`,
     ),
+
+  deleteFile: (caseId: string, docId: string, fileId: string) =>
+    api(`/api/cases/${caseId}/documents/${docId}/files/${fileId}`, { method: 'DELETE' }),
+
+  deleteDocument: (caseId: string, docId: string) =>
+    api(`/api/cases/${caseId}/documents/${docId}`, { method: 'DELETE' }),
+
+  updateDocument: (caseId: string, docId: string, data: { label?: string }) =>
+    api(`/api/cases/${caseId}/documents/${docId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
 
   addCustomDocument: (
     caseId: string,

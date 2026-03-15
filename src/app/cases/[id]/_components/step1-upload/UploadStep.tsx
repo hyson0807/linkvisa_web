@@ -76,15 +76,25 @@ function DocumentSlot({
   docType,
   caseDoc,
   caseId,
+  onDelete,
+  onEditLabel,
 }: {
   docType: DocumentTypeDef;
   caseDoc: CaseDocument;
   caseId: string;
+  onDelete: (docId: string) => void;
+  onEditLabel: (docId: string, currentLabel: string) => void;
 }) {
   const uploadFile = useCaseStore((s) => s.uploadFile);
+  const removeFile = useCaseStore((s) => s.removeFile);
   const [uploading, setUploading] = useState(false);
   const hasFile = hasFiles(caseDoc);
   const lastFile = latestFile(caseDoc);
+
+  const handleRemoveFile = useCallback(async () => {
+    if (!lastFile) return;
+    await removeFile(caseId, caseDoc.id, lastFile.id);
+  }, [caseId, caseDoc.id, lastFile, removeFile]);
 
   const handleUpload = useCallback(
     async (file: File) => {
@@ -129,6 +139,16 @@ function DocumentSlot({
             : 'border-black/10 bg-white hover:border-primary/30 hover:bg-primary/2'
       }`}
     >
+      {/* X button — top right, deletes the document slot */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(caseDoc.id); }}
+        className="absolute top-1.5 right-1.5 z-10 rounded-md p-1 text-black/20 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-400 transition-all"
+        title="서류 삭제"
+      >
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+        </svg>
+      </button>
       <div className="flex items-center gap-3">
         <div
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
@@ -160,16 +180,39 @@ function DocumentSlot({
             })()}
           </div>
           {hasFile && lastFile && (
-            <div className="text-sm text-primary/70">
-              {lastFile.name} ({formatFileSize(lastFile.size)})
+            <div className="flex items-center gap-1.5 text-sm text-primary/70">
+              <span>{lastFile.name} ({formatFileSize(lastFile.size)})</span>
             </div>
           )}
         </div>
         {hasFile && (
           <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary">완료</span>
         )}
+        {/* Edit/Remove file buttons — visible on hover */}
+        <div className="flex shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEditLabel(caseDoc.id, docType.label); }}
+            className="rounded-lg p-1.5 text-black/25 hover:bg-black/5 hover:text-black/50 transition-colors"
+            title="이름 수정"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" />
+            </svg>
+          </button>
+          {hasFile && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleRemoveFile(); }}
+              className="rounded-lg p-1.5 text-black/25 hover:bg-red-50 hover:text-red-400 transition-colors"
+              title="파일 제거"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
-      {!hasFile && (
+      {!hasFile && !uploading && (
         <input
           type="file"
           className="absolute inset-0 cursor-pointer opacity-0"
@@ -178,7 +221,7 @@ function DocumentSlot({
         />
       )}
       {hasFile && (
-        <label className="absolute inset-0 cursor-pointer opacity-0">
+        <label className="absolute inset-0 cursor-pointer opacity-0 group-hover:pointer-events-none">
           <input type="file" className="hidden" onChange={handleFileSelect} accept="image/*,.pdf" />
         </label>
       )}
@@ -196,6 +239,8 @@ function ProviderColumn({
   providerId,
   onAddCustom,
   onCopyLink,
+  onDeleteDoc,
+  onEditLabel,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -206,6 +251,8 @@ function ProviderColumn({
   providerId: string;
   onAddCustom: () => void;
   onCopyLink: (providerId: string) => void;
+  onDeleteDoc: (docId: string) => void;
+  onEditLabel: (docId: string, currentLabel: string) => void;
 }) {
   const [copied, setCopied] = useState(false);
   const doneCount = docs.filter((d) => hasFiles(d.caseDoc)).length;
@@ -274,7 +321,7 @@ function ProviderColumn({
       {/* Document list */}
       <div className="flex flex-1 flex-col gap-3 p-4">
         {docs.map(({ caseDoc, docType }) => (
-          <DocumentSlot key={caseDoc.id} docType={docType} caseDoc={caseDoc} caseId={caseId} />
+          <DocumentSlot key={caseDoc.id} docType={docType} caseDoc={caseDoc} caseId={caseId} onDelete={onDeleteDoc} onEditLabel={onEditLabel} />
         ))}
         <button
           onClick={onAddCustom}
@@ -347,45 +394,48 @@ function StudentDocSection({ docs, caseId }: { docs: DocWithType[]; caseId: stri
   );
 }
 
-function AddDocumentModal({
-  onAdd,
+function TextInputModal({
+  title,
+  placeholder,
+  submitLabel,
+  initialValue = '',
+  onSubmit,
   onClose,
 }: {
-  onAdd: (label: string) => void;
+  title: string;
+  placeholder: string;
+  submitLabel: string;
+  initialValue?: string;
+  onSubmit: (value: string) => void;
   onClose: () => void;
 }) {
-  const [label, setLabel] = useState('');
+  const [value, setValue] = useState(initialValue);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-bold text-black/85 mb-4">서류 추가</h3>
+        <h3 className="text-lg font-bold text-black/85 mb-4">{title}</h3>
         <input
           autoFocus
           type="text"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && label.trim()) {
-              onAdd(label.trim());
-            }
+            if (e.key === 'Enter' && value.trim()) onSubmit(value.trim());
           }}
-          placeholder="서류 이름 입력 (예: 자격증 사본)"
+          placeholder={placeholder}
           className={INPUT_CLASS}
         />
         <div className="mt-4 flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-black/40 hover:bg-black/5 transition-colors"
-          >
+          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-black/40 hover:bg-black/5 transition-colors">
             취소
           </button>
           <button
-            onClick={() => label.trim() && onAdd(label.trim())}
-            disabled={!label.trim()}
+            onClick={() => value.trim() && onSubmit(value.trim())}
+            disabled={!value.trim()}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-40 hover:bg-primary-dark transition-colors"
           >
-            추가
+            {submitLabel}
           </button>
         </div>
       </div>
@@ -416,8 +466,11 @@ function Toast({ message, subMessage, onClose }: { message: string; subMessage?:
 export default function UploadStep({ caseData, onNext }: UploadStepProps) {
   const setManualField = useCaseStore((s) => s.setManualField);
   const addCustomDocument = useCaseStore((s) => s.addCustomDocument);
+  const deleteDocument = useCaseStore((s) => s.deleteDocument);
+  const updateDocumentLabel = useCaseStore((s) => s.updateDocumentLabel);
 
   const [addModalProvider, setAddModalProvider] = useState<DocumentProvider | null>(null);
+  const [editingDoc, setEditingDoc] = useState<{ id: string; label: string } | null>(null);
   const [toast, setToast] = useState<{ message: string; subMessage?: string } | null>(null);
 
   const handleCopyLink = useCallback((providerId: string) => {
@@ -454,7 +507,8 @@ export default function UploadStep({ caseData, onNext }: UploadStepProps) {
     const docs = docsWithType.filter((d) => {
       // D-2의 학생 제출 서류 Provider는 StudentDocSection에서 별도 처리
       if (isD2 && provider.id === 'd2-student') return false;
-      return provider.docTypeIds.includes(d.docType.id);
+      return provider.docTypeIds.includes(d.docType.id)
+        || (d.caseDoc.isCustom && d.caseDoc.customCategory === provider.defaultCategory);
     });
     return { provider, docs };
   });
@@ -467,12 +521,31 @@ export default function UploadStep({ caseData, onNext }: UploadStepProps) {
   // Provider에 매핑되지 않은 문서 (커스텀 서류 등)
   const allProviderDocIds = new Set(providers.flatMap((p) => p.docTypeIds));
   const unmappedDocs = docsWithType.filter(
-    (d) => !allProviderDocIds.has(d.docType.id) && !(isD2 && D2_STUDENT_DOC_IDS.includes(d.docType.id))
+    (d) => !allProviderDocIds.has(d.docType.id)
+      && !(d.caseDoc.isCustom && providers.some(p => p.defaultCategory === d.caseDoc.customCategory))
+      && !(isD2 && D2_STUDENT_DOC_IDS.includes(d.docType.id))
   );
 
   const doneUpload = docsWithType.filter((d) => hasFiles(d.caseDoc)).length;
   const totalUpload = docsWithType.length;
   const hasAnyUpload = doneUpload > 0;
+
+  const handleDeleteDoc = useCallback(async (docId: string) => {
+    if (!confirm('이 서류를 삭제하시겠습니까? 업로드된 파일도 함께 삭제됩니다.')) return;
+    await deleteDocument(caseData.id, docId);
+    setToast({ message: '서류가 삭제되었습니다' });
+    setTimeout(() => setToast(null), 2000);
+  }, [caseData.id, deleteDocument]);
+
+  const handleEditLabel = useCallback((docId: string, currentLabel: string) => {
+    setEditingDoc({ id: docId, label: currentLabel });
+  }, []);
+
+  const handleSaveLabel = useCallback(async (label: string) => {
+    if (!editingDoc) return;
+    await updateDocumentLabel(caseData.id, editingDoc.id, label);
+    setEditingDoc(null);
+  }, [caseData.id, editingDoc, updateDocumentLabel]);
 
   const handleAddCustom = async (label: string) => {
     if (addModalProvider) {
@@ -572,6 +645,8 @@ export default function UploadStep({ caseData, onNext }: UploadStepProps) {
                   providerId={provider.id}
                   onAddCustom={() => setAddModalProvider(provider)}
                   onCopyLink={handleCopyLink}
+                  onDeleteDoc={handleDeleteDoc}
+                  onEditLabel={handleEditLabel}
                 />
               );
             })}
@@ -599,6 +674,8 @@ export default function UploadStep({ caseData, onNext }: UploadStepProps) {
                   docTypeIds: [],
                 })}
                 onCopyLink={handleCopyLink}
+                onDeleteDoc={handleDeleteDoc}
+                onEditLabel={handleEditLabel}
               />
             )}
           </div>
@@ -607,9 +684,24 @@ export default function UploadStep({ caseData, onNext }: UploadStepProps) {
 
       {/* Add document modal */}
       {addModalProvider && (
-        <AddDocumentModal
-          onAdd={handleAddCustom}
+        <TextInputModal
+          title="서류 추가"
+          placeholder="서류 이름 입력 (예: 자격증 사본)"
+          submitLabel="추가"
+          onSubmit={handleAddCustom}
           onClose={() => setAddModalProvider(null)}
+        />
+      )}
+
+      {/* Edit label modal */}
+      {editingDoc && (
+        <TextInputModal
+          title="서류 이름 수정"
+          placeholder="서류 이름"
+          submitLabel="저장"
+          initialValue={editingDoc.label}
+          onSubmit={handleSaveLabel}
+          onClose={() => setEditingDoc(null)}
         />
       )}
 

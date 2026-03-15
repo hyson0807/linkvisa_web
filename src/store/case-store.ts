@@ -18,6 +18,9 @@ interface CaseStore {
   setManualField: (caseId: string, fieldId: string, value: string) => void;
   setManualFields: (caseId: string, fields: Record<string, string>) => void;
 
+  removeFile: (caseId: string, documentId: string, fileId: string) => Promise<void>;
+  deleteDocument: (caseId: string, documentId: string) => Promise<void>;
+  updateDocumentLabel: (caseId: string, documentId: string, label: string) => Promise<void>;
   addCustomDocument: (caseId: string, label: string, category: 'foreigner' | 'company') => Promise<void>;
   uploadFile: (caseId: string, documentId: string, file: File) => Promise<void>;
   setOcrResult: (caseId: string, documentId: string, ocrResult: Record<string, string>) => void;
@@ -141,6 +144,51 @@ export const useCaseStore = create<CaseStore>()((set, get) => ({
     caseApi.update(caseId, { manualFields: fields }).catch(() => {});
   },
 
+  removeFile: async (caseId, documentId, fileId) => {
+    await caseApi.deleteFile(caseId, documentId, fileId);
+    set((state) => ({
+      cases: state.cases.map((c) =>
+        c.id === caseId
+          ? {
+              ...c,
+              documents: c.documents.map((d) => {
+                if (d.id !== documentId) return d;
+                const files = (d.files ?? []).filter((f) => f.id !== fileId);
+                return { ...d, files, status: files.length > 0 ? d.status : 'pending' as const };
+              }),
+            }
+          : c
+      ),
+    }));
+  },
+
+  deleteDocument: async (caseId, documentId) => {
+    await caseApi.deleteDocument(caseId, documentId);
+    set((state) => ({
+      cases: state.cases.map((c) =>
+        c.id === caseId
+          ? { ...c, documents: c.documents.filter((d) => d.id !== documentId) }
+          : c
+      ),
+    }));
+  },
+
+  updateDocumentLabel: async (caseId, documentId, label) => {
+    await caseApi.updateDocument(caseId, documentId, { label });
+    set((state) => ({
+      cases: state.cases.map((c) =>
+        c.id === caseId
+          ? {
+              ...c,
+              documents: c.documents.map((d) =>
+                d.id === documentId ? { ...d, customLabel: label } : d
+              ),
+            }
+          : c
+      ),
+    }));
+  },
+
   addCustomDocument: async (caseId, label, category) => {
     const raw = await caseApi.addCustomDocument(caseId, label, category);
     const doc = raw as Record<string, unknown>;
@@ -165,8 +213,8 @@ export const useCaseStore = create<CaseStore>()((set, get) => ({
     const result = await caseApi.uploadFile(caseId, documentId, file);
     const fileHandle: FileHandle = {
       id: result.id,
-      name: result.fileName,
-      size: result.fileSize,
+      name: file.name,
+      size: file.size,
       type: file.type,
     };
     set((state) => ({

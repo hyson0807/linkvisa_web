@@ -806,12 +806,30 @@ export function getStudentDocuments(): DocumentTypeDef[] {
 }
 
 export function resolveDocsWithType(caseData: Case): DocWithType[] {
-  const customTypes = caseData.customDocTypes ?? [];
   return caseData.documents
-    .map((cd) => ({
-      caseDoc: cd,
-      docType: documentRegistry.find((d) => d.id === cd.typeId)
-        ?? customTypes.find((d) => d.id === cd.typeId),
-    }))
-    .filter((d): d is DocWithType => !!d.docType);
+    .map((cd) => {
+      // Try static registry first
+      const registryType = documentRegistry.find((d) => d.id === cd.typeId);
+      if (registryType) {
+        // If doc has a custom label override, use it
+        const docType = cd.customLabel
+          ? { ...registryType, label: cd.customLabel }
+          : registryType;
+        return { caseDoc: cd, docType };
+      }
+      // Fallback: build docType from the document's own fields (custom or label-edited docs)
+      if (cd.customLabel) {
+        const docType: DocumentTypeDef = {
+          id: cd.typeId,
+          label: cd.customLabel,
+          category: (cd.customCategory as DocumentTypeDef['category']) ?? 'foreigner',
+          source: 'upload',
+          step: 'upload',
+          requiredForVisas: [],
+        };
+        return { caseDoc: cd, docType };
+      }
+      return null;
+    })
+    .filter((d): d is DocWithType => d !== null);
 }
