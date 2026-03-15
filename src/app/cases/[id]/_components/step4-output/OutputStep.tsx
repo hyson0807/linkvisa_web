@@ -6,6 +6,7 @@ import type { Case, CaseDocument, DocumentTypeDef } from '@/types/case';
 import GeneratedDocCard from './GeneratedDocCard';
 import DocumentInspectModal from './DocumentInspectModal';
 import UploadedDocsChecklist from './UploadedDocsChecklist';
+import GuestSaveBanner from './GuestSaveBanner';
 
 interface OutputStepProps {
   caseData: Case;
@@ -37,6 +38,8 @@ export default function OutputStep({ caseData, onPrev }: OutputStepProps) {
           {generatedDocs.length}건 완성
         </span>
       </div>
+
+      <GuestSaveBanner />
 
       <div className="mb-8">
         <h3 className="mb-4 text-base font-bold text-black/70">작성 완료된 서류</h3>
