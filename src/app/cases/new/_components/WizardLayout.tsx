@@ -1,6 +1,7 @@
 'use client';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/auth-store';
 
 interface WizardLayoutProps {
   step: number;
@@ -11,6 +12,9 @@ interface WizardLayoutProps {
 }
 
 export default function WizardLayout({ step, totalSteps, direction, onBack, children }: WizardLayoutProps) {
+  const router = useRouter();
+  const { user } = useAuthStore();
+
   const animationClass = direction === 'forward'
     ? 'animate-[slideInFromRight_0.3s_ease-out]'
     : 'animate-[slideInFromLeft_0.3s_ease-out]';
@@ -20,15 +24,7 @@ export default function WizardLayout({ step, totalSteps, direction, onBack, chil
       {/* 상단 네비게이션 */}
       <nav className="flex items-center justify-between px-6 py-4">
         {step === 1 ? (
-          <Link
-            href="/cases"
-            className="flex items-center gap-1.5 text-sm font-medium text-black/40 transition-colors hover:text-black/70"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-            케이스 목록
-          </Link>
+          <div />
         ) : (
           <button
             onClick={onBack}
@@ -53,12 +49,12 @@ export default function WizardLayout({ step, totalSteps, direction, onBack, chil
           ))}
         </div>
 
-        <Link
-          href="/cases"
+        <button
+          onClick={() => router.push(user ? '/dashboard' : '/')}
           className="text-sm font-medium text-black/30 transition-colors hover:text-black/60"
         >
           나가기
-        </Link>
+        </button>
       </nav>
 
       {/* 컨텐츠 영역 */}
