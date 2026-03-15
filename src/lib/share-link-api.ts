@@ -7,6 +7,8 @@ export interface ShareLinkDocument {
   typeId: string;
   status: string;
   customLabel: string | null;
+  isCustom: boolean;
+  customCategory: string | null;
   files: { id: string; fileName: string; fileSize: number; mimeType: string }[];
 }
 

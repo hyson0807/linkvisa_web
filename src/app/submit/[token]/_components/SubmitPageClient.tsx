@@ -115,7 +115,11 @@ function SubmitPageReady({
   const filteredDocs = useMemo(() => {
     if (!provider) return data.documents;
     const providerDocTypeIds = new Set(provider.docTypeIds);
-    return data.documents.filter((doc) => providerDocTypeIds.has(doc.typeId));
+    return data.documents.filter(
+      (doc) =>
+        providerDocTypeIds.has(doc.typeId) ||
+        (doc.isCustom && doc.customCategory === provider.defaultCategory),
+    );
   }, [data.documents, provider]);
 
   // Map documents to display items with labels
