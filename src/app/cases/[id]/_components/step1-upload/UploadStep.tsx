@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCaseStore } from '@/store/case-store';
+import { useAuthStore } from '@/store/auth-store';
 import { resolveDocsWithType } from '@/lib/document-registry';
 import { formatFileSize } from '@/lib/file-utils';
 import { D2_STUDENT_DOC_IDS } from '@/lib/document-registry';
@@ -13,6 +15,7 @@ import {
 import type { DocumentProvider, ProviderIcon } from '@/lib/provider-registry';
 import { hasFiles, latestFile } from '@/types/case';
 import type { Case, DocWithType, DocumentTypeDef, CaseDocument } from '@/types/case';
+import AuthModal from '@/components/auth/AuthModal';
 
 interface UploadStepProps {
   caseData: Case;
@@ -471,6 +474,10 @@ export default function UploadStep({ caseData, onNext }: UploadStepProps) {
   const deleteDocument = useCaseStore((s) => s.deleteDocument);
   const updateDocumentLabel = useCaseStore((s) => s.updateDocumentLabel);
 
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const [authModalTab, setAuthModalTab] = useState<'login' | 'signup' | null>(null);
+
   const [addModalProvider, setAddModalProvider] = useState<DocumentProvider | null>(null);
   const [editingDoc, setEditingDoc] = useState<{ id: string; label: string } | null>(null);
   const [toast, setToast] = useState<{ message: string; subMessage?: string } | null>(null);
@@ -732,34 +739,41 @@ export default function UploadStep({ caseData, onNext }: UploadStepProps) {
         />
       )}
 
-      {/* Next button */}
-      <div className="mt-8 flex items-center justify-between">
-        {!hasAnyUpload && (
-          <span className="text-sm text-black/30">
-            서류 없이도 다음 단계로 넘어갈 수 있습니다
-          </span>
-        )}
-        <div className="ml-auto flex items-center gap-3">
-          {!hasAnyUpload && (
-            <button
-              onClick={onNext}
-              className="rounded-xl border border-black/10 px-6 py-3 text-[15px] font-medium text-black/50 hover:bg-black/3 transition-all"
-            >
-              건너뛰기
-            </button>
-          )}
-          <button
-            onClick={onNext}
-            className={`rounded-xl px-8 py-3 text-[15px] font-semibold transition-all ${
-              hasAnyUpload
-                ? 'bg-primary text-white shadow-lg shadow-primary/25 hover:bg-primary-dark'
-                : 'bg-primary/80 text-white hover:bg-primary'
-            }`}
-          >
-            다음: 추가 정보 입력 →
-          </button>
-        </div>
+      {/* Bottom buttons */}
+      <div className="mt-8 flex items-center justify-end gap-3">
+        <button
+          onClick={() => {
+            if (user) {
+              router.push('/dashboard');
+            } else {
+              setAuthModalTab('login');
+            }
+          }}
+          className="rounded-xl border border-black/10 px-6 py-3 text-[15px] font-medium text-black/50 hover:bg-black/3 transition-all"
+        >
+          대시보드에서 대기
+        </button>
+        <button
+          onClick={onNext}
+          className="rounded-xl bg-primary px-8 py-3 text-[15px] font-semibold text-white shadow-lg shadow-primary/25 hover:bg-primary-dark transition-all"
+        >
+          서류 업로드 완료 →
+        </button>
       </div>
+
+      {/* Auth modal for dashboard redirect */}
+      {authModalTab && (
+        <AuthModal
+          isOpen
+          onClose={() => {
+            setAuthModalTab(null);
+            if (useAuthStore.getState().user) {
+              router.push('/dashboard');
+            }
+          }}
+          initialTab={authModalTab}
+        />
+      )}
 
       {/* Footer notice */}
       <p className="mt-6 text-center text-[13px] text-black/30">

@@ -45,6 +45,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       try {
         const user = await api<User>("/api/auth/me");
         set({ user, isReady: true });
+        await claimGuestCases();
       } catch {
         set({ user: null, isReady: true });
       } finally {
