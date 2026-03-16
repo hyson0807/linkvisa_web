@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useCaseStore } from '@/store/case-store';
 import { resolveDocsWithType } from '@/lib/document-registry';
+import { caseApi } from '@/lib/case-api';
 import { runMockOcr } from '@/lib/mock-ocr';
 import { runMockAiGenerate } from '@/lib/mock-ai-generate';
 import AutoFillShowcase from './AutoFillShowcase';
@@ -19,7 +20,7 @@ function useDocsWithType(caseData: Case) {
   const all = resolveDocsWithType(caseData);
 
   const ocrDocs = all.filter(
-    (d) => d.docType.source === 'upload' && d.docType.ocrFields && d.docType.ocrFields.length > 0
+    (d) => d.docType.source === 'upload'
   );
   const formGenDocs = all.filter((d) => d.docType.source === 'form-generate');
   const aiDocs = all.filter((d) => d.docType.source === 'ai-generate');
@@ -43,9 +44,14 @@ export default function ReviewStep({ caseData, onNext, onPrev }: ReviewStepProps
     const manualFields = caseData.manualFields;
 
     (async () => {
-      for (const d of ocrDocs.filter((d) => !d.caseDoc.ocrResult && hasFiles(d.caseDoc))) {
-        const result = await runMockOcr(d.docType.id);
-        setOcrResult(caseId, d.caseDoc.id, result);
+      for (const d of ocrDocs.filter((d) => hasFiles(d.caseDoc))) {
+        try {
+          const { result } = await caseApi.runOcr(caseId, d.caseDoc.id);
+          setOcrResult(caseId, d.caseDoc.id, result);
+        } catch (err) {
+          console.error(`OCR failed for ${d.docType.id}:`, err);
+          setOcrResult(caseId, d.caseDoc.id, {});
+        }
         await new Promise((r) => setTimeout(r, 400));
       }
 

@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useCaseStore } from '@/store/case-store';
 import {
   getFieldsForVisa,
   sectionMeta,
   sectionOrder,
 } from '@/lib/manual-field-registry';
+import { resolveDocsWithType } from '@/lib/document-registry';
 import ManualFieldSection from './ManualFieldSection';
 import type { Case, ManualFieldDef } from '@/types/case';
 
@@ -14,6 +15,59 @@ interface ManualInputStepProps {
   caseData: Case;
   onNext: () => void;
   onPrev: () => void;
+}
+
+function OcrDebugPanel({ caseData }: { caseData: Case }) {
+  const [open, setOpen] = useState(true);
+  const ocrDocs = useMemo(
+    () => resolveDocsWithType(caseData).filter(
+      (d) => d.caseDoc.ocrResult && Object.keys(d.caseDoc.ocrResult).length > 0,
+    ),
+    [caseData],
+  );
+
+  if (ocrDocs.length === 0) return null;
+
+  return (
+    <div className="mb-6 rounded-xl border-2 border-dashed border-amber-400 bg-amber-50 p-4">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between text-left"
+      >
+        <span className="text-sm font-semibold text-amber-700">
+          OCR 추출 결과 (테스트용)
+        </span>
+        <span className="text-xs text-amber-500">{open ? '접기 ▲' : '펼치기 ▼'}</span>
+      </button>
+      {open && (
+        <div className="mt-3 space-y-3">
+          {ocrDocs.map((d) => (
+            <div key={d.caseDoc.id} className="rounded-lg bg-white/70 p-3">
+              <p className="mb-2 text-xs font-semibold text-amber-800">
+                {d.docType.label}
+              </p>
+              <table className="w-full text-xs">
+                <tbody>
+                  {Object.entries(d.caseDoc.ocrResult!).map(([key, value]) => (
+                    <tr key={key} className="border-b border-amber-100 last:border-0">
+                      <td className="py-1 pr-3 font-medium text-amber-700 whitespace-nowrap">
+                        {key}
+                      </td>
+                      <td className="py-1 text-black/70">
+                        {typeof value === 'string'
+                          ? value || '—'
+                          : JSON.stringify(value)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ManualInputStep({ caseData, onNext, onPrev }: ManualInputStepProps) {
@@ -46,6 +100,8 @@ export default function ManualInputStep({ caseData, onNext, onPrev }: ManualInpu
 
   return (
     <div>
+      <OcrDebugPanel caseData={caseData} />
+
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-black/90">
           이 정보만 입력하면 끝

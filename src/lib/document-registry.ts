@@ -173,7 +173,7 @@ export const documentRegistry: DocumentTypeDef[] = [
     category: 'generated',
     source: 'form-generate',
     step: 'generate',
-    requiredForVisas: ['E-7', 'F-6', 'F-2'],
+    requiredForVisas: ALL_VISAS,
   },
   {
     id: 'occupation_report',

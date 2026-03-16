@@ -75,6 +75,12 @@ export const caseApi = {
       body: JSON.stringify({ label, category }),
     }),
 
+  runOcr: (caseId: string, docId: string) =>
+    api<{ result: Record<string, string> }>(
+      `/api/cases/${caseId}/documents/${docId}/ocr`,
+      { method: 'POST' },
+    ),
+
   createShareLink: (caseId: string, providerId: string) =>
     api<{ token: string; expiresAt: string; isActive: boolean }>('/api/share-links', {
       method: 'POST',

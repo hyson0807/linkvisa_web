@@ -1,8 +1,8 @@
 'use client';
 
-export type WizardStep = 'upload' | 'manual-input' | 'review' | 'output';
+export type WizardStep = 'upload' | 'form-confirm' | 'review' | 'manual-input' | 'output';
 
-const publicSteps: { key: Exclude<WizardStep, 'review'>; label: string }[] = [
+const publicSteps: { key: Exclude<WizardStep, 'review' | 'form-confirm'>; label: string }[] = [
   { key: 'upload', label: '서류업로드' },
   { key: 'manual-input', label: '정보입력' },
   { key: 'output', label: '공문서' },
@@ -15,7 +15,7 @@ interface StepIndicatorProps {
 
 export default function StepIndicator({ currentStep, onStepClick }: StepIndicatorProps) {
   const visualCurrentStep =
-    currentStep === 'review' ? 'upload' : currentStep;
+    currentStep === 'review' || currentStep === 'form-confirm' ? 'upload' : currentStep;
   const currentIndex = publicSteps.findIndex((s) => s.key === visualCurrentStep);
 
   return (
