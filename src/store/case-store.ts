@@ -83,6 +83,26 @@ function mapServerCase(raw: Record<string, unknown>): Case {
   };
 }
 
+// Debounced manual field persistence
+const pendingFields = new Map<string, Record<string, string>>();
+const flushTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function scheduleFlush(caseId: string) {
+  const existing = flushTimers.get(caseId);
+  if (existing) clearTimeout(existing);
+  flushTimers.set(
+    caseId,
+    setTimeout(() => {
+      const fields = pendingFields.get(caseId);
+      if (fields && Object.keys(fields).length > 0) {
+        caseApi.update(caseId, { manualFields: fields }).catch(() => {});
+        pendingFields.delete(caseId);
+      }
+      flushTimers.delete(caseId);
+    }, 500),
+  );
+}
+
 export const useCaseStore = create<CaseStore>()((set, get) => ({
   cases: [],
   loading: false,
@@ -155,6 +175,9 @@ export const useCaseStore = create<CaseStore>()((set, get) => ({
           : c
       ),
     }));
+    const current = pendingFields.get(caseId) ?? {};
+    pendingFields.set(caseId, { ...current, [fieldId]: value });
+    scheduleFlush(caseId);
   },
 
   setManualFields: (caseId, fields) => {
