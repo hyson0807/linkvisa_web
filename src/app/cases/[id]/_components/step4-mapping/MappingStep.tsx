@@ -54,8 +54,8 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
   const forms = useMemo(() => getFormsForCase(caseData), [caseData]);
   const setManualField = useCaseStore((s) => s.setManualField);
 
-  const [expandedFormId, setExpandedFormId] = useState<string | null>(
-    forms.length > 0 ? forms[0].id : null,
+  const [activeFormId, setActiveFormId] = useState<string>(
+    forms.length > 0 ? forms[0].id : '',
   );
 
   const [localInputs, setLocalInputs] = useState<Record<string, string>>({});
@@ -100,149 +100,155 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
         </p>
       </div>
 
-      {/* Form accordions */}
-      <div className="rounded-xl border border-black/5 bg-white shadow-sm">
+      {/* Form tabs */}
+      <div className="rounded-xl border border-black/5 bg-white shadow-sm overflow-hidden">
+        {/* Tab bar */}
+        <div className="flex border-b border-black/5 overflow-x-auto">
+          {formAnalyses.map(({ formDef, analysis }) => {
+            const isActive = activeFormId === formDef.id;
+            const mappedCount = analysis.mapped.length;
+            const unmappedCount = analysis.unmapped.length;
+            const hasMappingData = hasMappings(formDef);
+
+            return (
+              <button
+                key={formDef.id}
+                type="button"
+                onClick={() => setActiveFormId(formDef.id)}
+                className={`relative shrink-0 px-4 py-3 text-left transition-colors ${
+                  isActive
+                    ? 'bg-white'
+                    : 'bg-black/[0.02] hover:bg-black/[0.04]'
+                }`}
+              >
+                <span className={`block text-xs font-semibold whitespace-nowrap ${
+                  isActive ? 'text-primary' : 'text-black/50'
+                }`}>
+                  {formDef.label}
+                </span>
+                {hasMappingData ? (
+                  <span className={`block mt-0.5 text-[10px] whitespace-nowrap ${
+                    isActive ? 'text-black/40' : 'text-black/30'
+                  }`}>
+                    {mappedCount}개 매핑{unmappedCount > 0 && ` · ${unmappedCount}개 미입력`}
+                  </span>
+                ) : (
+                  <span className="block mt-0.5 text-[10px] text-black/25">준비중</span>
+                )}
+                {isActive && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tab content */}
         {formAnalyses.map(({ formDef, analysis }) => {
-          const isExpanded = expandedFormId === formDef.id;
-          const mappedCount = analysis.mapped.length;
-          const unmappedCount = analysis.unmapped.length;
+          if (formDef.id !== activeFormId) return null;
           const hasMappingData = hasMappings(formDef);
 
           return (
-            <div key={formDef.id} className="border-b border-black/5 last:border-b-0">
-              {/* Accordion header */}
-              <button
-                type="button"
-                onClick={() => setExpandedFormId(isExpanded ? null : formDef.id)}
-                className="flex w-full items-center justify-between px-5 py-3.5 text-left hover:bg-black/[0.02]"
-              >
-                <div className="flex items-center gap-2">
-                  <svg
-                    className={`h-3.5 w-3.5 text-black/30 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                  <span className="text-sm font-semibold text-black/70">{formDef.label}</span>
-                  {!hasMappingData && (
-                    <span className="rounded bg-black/5 px-1.5 py-0.5 text-[10px] text-black/30">준비중</span>
-                  )}
-                </div>
-                {hasMappingData && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-emerald-600">{mappedCount}개 매핑</span>
-                    {unmappedCount > 0 && (
-                      <span className="text-xs text-amber-600">{unmappedCount}개 미입력</span>
-                    )}
-                  </div>
-                )}
-              </button>
+            <div key={formDef.id} className="p-5">
+              {!hasMappingData ? (
+                <p className="text-xs text-black/30 py-2">PDF 템플릿 준비 후 매핑이 추가됩니다.</p>
+              ) : (
+                (() => {
+                  const fieldMap = buildFieldMap(analysis);
+                  const isUnified = formDef.id === 'unified_application';
+                  const groups = isUnified ? UNIFIED_FIELD_GROUPS : [];
 
-              {/* Accordion content */}
-              {isExpanded && (
-                <div className="px-5 pb-4">
-                  {!hasMappingData ? (
-                    <p className="text-xs text-black/30 py-2">PDF 템플릿 준비 후 매핑이 추가됩니다.</p>
-                  ) : (
-                    (() => {
-                      const fieldMap = buildFieldMap(analysis);
-                      const isUnified = formDef.id === 'unified_application';
-                      const groups = isUnified ? UNIFIED_FIELD_GROUPS : [];
+                  // Fields not in any group
+                  const ungroupedFields = [...fieldMap.entries()]
+                    .filter(([key]) => !GROUPED_FIELDS.has(key))
+                    .map(([, f]) => f);
 
-                      // Fields not in any group
-                      const ungroupedFields = [...fieldMap.entries()]
-                        .filter(([key]) => !GROUPED_FIELDS.has(key))
-                        .map(([, f]) => f);
+                  return (
+                    <div className="space-y-3">
+                      {/* Grouped sections (unified_application only) */}
+                      {groups.map((group) => {
+                        const groupFields = group.fields
+                          .map((f) => fieldMap.get(f))
+                          .filter((f): f is AnyField => !!f);
+                        if (groupFields.length === 0) return null;
 
-                      return (
-                        <div className="space-y-3">
-                          {/* Grouped sections (unified_application only) */}
-                          {groups.map((group) => {
-                            const groupFields = group.fields
-                              .map((f) => fieldMap.get(f))
-                              .filter((f): f is AnyField => !!f);
-                            if (groupFields.length === 0) return null;
+                        // Special: birth date + sex
+                        if (group.label === '생년월일 · 성별') {
+                          return (
+                            <BirthSexSection
+                              key={group.label}
+                              group={group}
+                              fields={groupFields}
+                              caseData={caseData}
+                              getFieldValue={getFieldValue}
+                              onFieldChange={handleInputChange}
+                              onFieldBlur={handleInputBlur}
+                              onManualField={(fieldId, val) => setManualField(caseData.id, fieldId, val)}
+                            />
+                          );
+                        }
 
-                            // Special: birth date + sex
-                            if (group.label === '생년월일 · 성별') {
-                              return (
-                                <BirthSexSection
-                                  key={group.label}
-                                  group={group}
-                                  fields={groupFields}
-                                  caseData={caseData}
-                                  getFieldValue={getFieldValue}
-                                  onFieldChange={handleInputChange}
-                                  onFieldBlur={handleInputBlur}
-                                  onManualField={(fieldId, val) => setManualField(caseData.id, fieldId, val)}
-                                />
-                              );
-                            }
+                        // Special: school info with selects
+                        if (group.label === '학교 정보') {
+                          return (
+                            <SchoolSection
+                              key={group.label}
+                              group={group}
+                              fields={groupFields}
+                              caseData={caseData}
+                              getFieldValue={getFieldValue}
+                              onFieldChange={handleInputChange}
+                              onFieldBlur={handleInputBlur}
+                              onManualField={(fieldId, val) => setManualField(caseData.id, fieldId, val)}
+                            />
+                          );
+                        }
 
-                            // Special: school info with selects
-                            if (group.label === '학교 정보') {
-                              return (
-                                <SchoolSection
-                                  key={group.label}
-                                  group={group}
-                                  fields={groupFields}
-                                  caseData={caseData}
-                                  getFieldValue={getFieldValue}
-                                  onFieldChange={handleInputChange}
-                                  onFieldBlur={handleInputBlur}
-                                  onManualField={(fieldId, val) => setManualField(caseData.id, fieldId, val)}
-                                />
-                              );
-                            }
+                        // Special: alien reg row
+                        if (group.label === '외국인등록번호') {
+                          const digits = ALIEN_REG_FIELDS.map((field) => {
+                            const mapped = analysis.mapped.find((f) => f.pdfField === field);
+                            return getFieldValue(field, mapped?.value);
+                          });
+                          return (
+                            <AlienRegRow
+                              key={group.label}
+                              digits={digits}
+                              onDigitChange={(idx, val) => handleInputChange(ALIEN_REG_FIELDS[idx], val)}
+                              onDigitBlur={(idx, val) => handleInputBlur(ALIEN_REG_FIELDS[idx], val)}
+                            />
+                          );
+                        }
 
-                            // Special: alien reg row
-                            if (group.label === '외국인등록번호') {
-                              const digits = ALIEN_REG_FIELDS.map((field) => {
-                                const mapped = analysis.mapped.find((f) => f.pdfField === field);
-                                return getFieldValue(field, mapped?.value);
-                              });
-                              return (
-                                <AlienRegRow
-                                  key={group.label}
-                                  digits={digits}
-                                  onDigitChange={(idx, val) => handleInputChange(ALIEN_REG_FIELDS[idx], val)}
-                                  onDigitBlur={(idx, val) => handleInputBlur(ALIEN_REG_FIELDS[idx], val)}
-                                />
-                              );
-                            }
+                        return (
+                          <FieldGroupSection
+                            key={group.label}
+                            group={group}
+                            fields={groupFields}
+                            getFieldValue={getFieldValue}
+                            onFieldChange={handleInputChange}
+                            onFieldBlur={handleInputBlur}
+                          />
+                        );
+                      })}
 
-                            return (
-                              <FieldGroupSection
-                                key={group.label}
-                                group={group}
-                                fields={groupFields}
-                                getFieldValue={getFieldValue}
-                                onFieldChange={handleInputChange}
-                                onFieldBlur={handleInputBlur}
-                              />
-                            );
-                          })}
-
-                          {/* Ungrouped fields (other forms, or fields not in groups) */}
-                          {ungroupedFields.length > 0 && (
-                            <div className="space-y-1">
-                              {ungroupedFields.map((f) => (
-                                <FieldInput
-                                  key={f.pdfField}
-                                  field={f}
-                                  value={getFieldValue(f.pdfField, f.isMapped ? (f as MappedField).value : '')}
-                                  onChange={(val) => handleInputChange(f.pdfField, val)}
-                                  onBlur={(val) => handleInputBlur(f.pdfField, val)}
-                                />
-                              ))}
-                            </div>
-                          )}
-
+                      {/* Ungrouped fields (other forms, or fields not in groups) */}
+                      {ungroupedFields.length > 0 && (
+                        <div className="space-y-1">
+                          {ungroupedFields.map((f) => (
+                            <FieldInput
+                              key={f.pdfField}
+                              field={f}
+                              value={getFieldValue(f.pdfField, f.isMapped ? (f as MappedField).value : '')}
+                              onChange={(val) => handleInputChange(f.pdfField, val)}
+                              onBlur={(val) => handleInputBlur(f.pdfField, val)}
+                            />
+                          ))}
                         </div>
-                      );
-                    })()
-                  )}
-                </div>
+                      )}
+                    </div>
+                  );
+                })()
               )}
             </div>
           );
