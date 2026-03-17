@@ -200,6 +200,22 @@ export const documentRegistry: DocumentTypeDef[] = [
     requiredForVisas: ['E-7', 'F-2'],
   },
   {
+    id: 'professional_recommendation',
+    label: '전문인력 고용추천서',
+    category: 'generated',
+    source: 'form-generate',
+    step: 'generate',
+    requiredForVisas: ['E-7'],
+  },
+  {
+    id: 'residence_confirmation',
+    label: '거주숙소 제공확인서',
+    category: 'generated',
+    source: 'form-generate',
+    step: 'generate',
+    requiredForVisas: ['E-7'],
+  },
+  {
     id: 'stay_extension_app',
     label: '체류기간 연장 신청서',
     category: 'generated',
@@ -423,7 +439,7 @@ export const documentRegistry: DocumentTypeDef[] = [
     category: 'generated',
     source: 'form-generate',
     step: 'generate',
-    requiredForVisas: ['F-6'],
+    requiredForVisas: ['E-7', 'F-6'],
   },
   {
     id: 'marriage_background',
