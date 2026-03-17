@@ -59,7 +59,7 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
   };
 
   const getFieldValue = (pdfField: string, fallback?: string) =>
-    localInputs[pdfField] ?? caseData.manualFields?.[pdfField] ?? fallback ?? '';
+    localInputs[pdfField] ?? (caseData.manualFields?.[pdfField] || fallback) ?? '';
 
   /** Build a lookup from pdfField → AnyField (mapped or unmapped) */
   const buildFieldMap = (analysis: ReturnType<typeof analyzeMappingStatus>) => {

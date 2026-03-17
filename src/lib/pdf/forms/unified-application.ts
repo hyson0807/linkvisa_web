@@ -144,7 +144,7 @@ const textFieldMappings: TextFieldMapping[] = [
   { field: 't33', source: { type: 'static', value: '' } },
 
   // School
-  { field: 't34', source: { type: 'static', value: '' } },
+  { field: 't34', source: { type: 'computed', fn: (c) => ocrFallback(c, ['degree_cert', '학교명'], ['graduation_cert', '학교명']) } },
   { field: 't35', source: { type: 'static', value: '' } },
 
   // Workplace - current

@@ -46,7 +46,8 @@ export const documentRegistry: DocumentTypeDef[] = [
     label: '졸업증명서',
     category: 'foreigner',
     source: 'upload',
-    step: 'upload',
+    step: 'ocr',
+    ocrFields: ['성명', '학교명', '학위', '전공', '졸업일자'],
     requiredForVisas: ['E-7', 'F-2'],
   },
   {

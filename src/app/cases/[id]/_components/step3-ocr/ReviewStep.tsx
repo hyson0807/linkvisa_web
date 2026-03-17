@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useCaseStore } from '@/store/case-store';
 import { resolveDocsWithType } from '@/lib/document-registry';
 import { caseApi } from '@/lib/case-api';
@@ -22,6 +22,7 @@ export default function ReviewStep({ caseData, onNext, onPrev }: ReviewStepProps
   const [currentDocName, setCurrentDocName] = useState('');
   const setOcrResult = useCaseStore((s) => s.setOcrResult);
   const setAiContent = useCaseStore((s) => s.setAiContent);
+  const cancelRef = useRef<(() => void) | undefined>(undefined);
 
   const resolved = useMemo(() => {
     const all = resolveDocsWithType(caseData);
@@ -41,8 +42,11 @@ export default function ReviewStep({ caseData, onNext, onPrev }: ReviewStepProps
     [resolved],
   );
 
-  useEffect(() => {
+  const runOcrProcess = useCallback(() => {
+    cancelRef.current?.();
     let cancelled = false;
+    cancelRef.current = () => { cancelled = true; };
+
     setStatus('processing');
     setCurrentDocName('');
 
@@ -51,9 +55,8 @@ export default function ReviewStep({ caseData, onNext, onPrev }: ReviewStepProps
 
     (async () => {
       await Promise.allSettled([
-        // 1) Upload docs → real OCR (always re-run)
+        // 1) Upload docs → real OCR
         (async () => {
-          // Clear old OCR results for docs without files
           for (const d of resolved.ocrDocs.filter((d) => !hasFiles(d.caseDoc) && d.caseDoc.ocrResult)) {
             setOcrResult(caseId, d.caseDoc.id, {});
           }
@@ -91,19 +94,38 @@ export default function ReviewStep({ caseData, onNext, onPrev }: ReviewStepProps
 
       if (!cancelled) setStatus('done');
     })();
+  }, [caseData.id, caseData.manualFields, resolved, setOcrResult, setAiContent]);
 
-    return () => { cancelled = true; };
+  useEffect(() => {
+    if (ocrResultDocs.length > 0) {
+      setStatus('done');
+    } else {
+      runOcrProcess();
+    }
+
+    return () => { cancelRef.current?.(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div>
       {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900">데이터 추출</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          업로드된 서류에서 데이터를 추출하고 양식을 자동 작성합니다.
-        </p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">데이터 추출</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            업로드된 서류에서 데이터를 추출하고 양식을 자동 작성합니다.
+          </p>
+        </div>
+        {status === 'done' && (
+          <button
+            type="button"
+            onClick={runOcrProcess}
+            className="shrink-0 rounded-lg border border-black/10 bg-white px-3 py-1.5 text-xs font-medium text-black/60 hover:bg-black/[0.03] hover:text-black/80 transition-colors"
+          >
+            다시 추출하기
+          </button>
+        )}
       </div>
 
       {/* Processing state */}
