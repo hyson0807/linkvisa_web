@@ -22,8 +22,8 @@ const checkboxMappings: CheckboxMapping[] = [
   { field: 'c8', condition: () => false },
   { field: 'c9', condition: (c) => c.applicationType === '체류지변경신고' },
   { field: 'c10', condition: (c) => c.applicationType === '등록사항변경신고' },
-  { field: 'c11', condition: (c) => { const v = getSex(c); return v === '남' || v === 'M'; } },
-  { field: 'c12', condition: (c) => { const v = getSex(c); return v === '여' || v === 'F'; } },
+  { field: 'c11', condition: (c) => { const v = c.manualFields?.sex || getSex(c); return v === '남' || v === 'M'; } },
+  { field: 'c12', condition: (c) => { const v = c.manualFields?.sex || getSex(c); return v === '여' || v === 'F'; } },
   // School status (재학 여부)
   { field: 'c13', condition: (c) => c.manualFields?.school_status === '미취학' },
   { field: 'c14', condition: (c) => c.manualFields?.school_status === '초' },

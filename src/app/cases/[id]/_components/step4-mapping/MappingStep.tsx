@@ -5,6 +5,7 @@ import type { Case } from '@/types/case';
 import '@/lib/pdf/forms';
 import { getFormsForCase } from '@/lib/pdf/form-registry';
 import { analyzeMappingStatus, type MappedField, type UnmappedField } from '@/lib/pdf/analyze';
+import { ocrFallback } from '@/lib/pdf/field-utils';
 import { useCaseStore } from '@/store/case-store';
 
 // ── Field grouping definitions ──
@@ -21,7 +22,7 @@ interface FieldGroup {
 const UNIFIED_FIELD_GROUPS: FieldGroup[] = [
   { label: '신청 자격', fields: ['t1', 't2', 't3', 't4', 't5', 't6'], cols: '1fr 1fr' },
   { label: '성명', fields: ['t7', 't8'], cols: '1fr 1fr' },
-  { label: '생년월일', fields: ['t9', 't10', 't11'], cols: '1fr 1fr 1fr' },
+  { label: '생년월일 · 성별', fields: ['t9', 't10', 't11'], cols: '1fr 1fr 1fr' },
   { label: '외국인등록번호', fields: ALIEN_REG_FIELDS },
   { label: '국적', fields: ['t25'] },
   { label: '여권 정보', fields: ['t26', 't27', 't28'], cols: '1fr 1fr 1fr' },
@@ -162,6 +163,38 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
                               .filter((f): f is AnyField => !!f);
                             if (groupFields.length === 0) return null;
 
+                            // Special: birth date + sex
+                            if (group.label === '생년월일 · 성별') {
+                              return (
+                                <BirthSexSection
+                                  key={group.label}
+                                  group={group}
+                                  fields={groupFields}
+                                  caseData={caseData}
+                                  getFieldValue={getFieldValue}
+                                  onFieldChange={handleInputChange}
+                                  onFieldBlur={handleInputBlur}
+                                  onManualField={(fieldId, val) => setManualField(caseData.id, fieldId, val)}
+                                />
+                              );
+                            }
+
+                            // Special: school info with selects
+                            if (group.label === '학교 정보') {
+                              return (
+                                <SchoolSection
+                                  key={group.label}
+                                  group={group}
+                                  fields={groupFields}
+                                  caseData={caseData}
+                                  getFieldValue={getFieldValue}
+                                  onFieldChange={handleInputChange}
+                                  onFieldBlur={handleInputBlur}
+                                  onManualField={(fieldId, val) => setManualField(caseData.id, fieldId, val)}
+                                />
+                              );
+                            }
+
                             // Special: alien reg row
                             if (group.label === '외국인등록번호') {
                               const digits = ALIEN_REG_FIELDS.map((field) => {
@@ -205,31 +238,6 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
                             </div>
                           )}
 
-                          {/* Checked checkboxes */}
-                          {analysis.checkedBoxes.length > 0 && (
-                            <div className="rounded-md bg-blue-50/50 px-3 py-2.5">
-                              <div className="mb-2 flex items-center gap-1.5">
-                                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                                  <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                  </svg>
-                                </span>
-                                <span className="text-xs font-semibold text-blue-700">
-                                  체크박스 ({analysis.checkedBoxes.length})
-                                </span>
-                              </div>
-                              <div className="flex flex-wrap gap-1">
-                                {analysis.checkedBoxes.map((label) => (
-                                  <span
-                                    key={label}
-                                    className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700"
-                                  >
-                                    {label}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       );
                     })()
@@ -348,6 +356,185 @@ function FieldInput({
           filled ? 'border-emerald-200' : 'border-amber-200'
         }`}
       />
+    </div>
+  );
+}
+
+// ── Birth date + Sex section ──
+
+const SEX_OPTIONS = [
+  { value: '남', label: '남 (M)' },
+  { value: '여', label: '여 (F)' },
+];
+
+function BirthSexSection({
+  group,
+  fields,
+  caseData,
+  getFieldValue,
+  onFieldChange,
+  onFieldBlur,
+  onManualField,
+}: {
+  group: FieldGroup;
+  fields: AnyField[];
+  caseData: Case;
+  getFieldValue: (pdfField: string, fallback?: string) => string;
+  onFieldChange: (pdfField: string, val: string) => void;
+  onFieldBlur: (pdfField: string, val: string) => void;
+  onManualField: (fieldId: string, val: string) => void;
+}) {
+  // Resolve current sex: manual override → OCR
+  const ocrSex = ocrFallback(caseData, ['passport', '성별'], ['alien_registration', '성별']).toUpperCase();
+  const normalizedOcrSex = (ocrSex === 'M' || ocrSex === '남') ? '남' : (ocrSex === 'F' || ocrSex === '여') ? '여' : '';
+  const sex = caseData.manualFields?.sex || normalizedOcrSex;
+
+  return (
+    <div className="rounded-md bg-black/[0.02] px-3 py-2.5">
+      <p className="mb-2 text-xs font-semibold text-black/50">{group.label}</p>
+      <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr' }}>
+        {fields.map((f) => {
+          const val = getFieldValue(f.pdfField, f.isMapped ? (f as MappedField).value : '');
+          const filled = val !== '';
+          return (
+            <div key={f.pdfField}>
+              <div className="mb-0.5 flex items-baseline justify-between gap-1">
+                <span className="text-[11px] font-medium text-black/50">{f.label}</span>
+                <span className="text-[9px] text-black/20">{f.pdfField}</span>
+              </div>
+              <input
+                type="text"
+                placeholder={f.label}
+                value={val}
+                onChange={(e) => onFieldChange(f.pdfField, e.target.value)}
+                onBlur={(e) => onFieldBlur(f.pdfField, e.target.value)}
+                className={`w-full rounded-md border bg-white px-2.5 py-1.5 text-xs text-black/70 placeholder:text-black/20 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 ${
+                  filled ? 'border-emerald-200' : 'border-black/10'
+                }`}
+              />
+            </div>
+          );
+        })}
+        <div>
+          <span className="mb-0.5 block text-[11px] font-medium text-black/50">성별</span>
+          <select
+            value={sex}
+            onChange={(e) => onManualField('sex', e.target.value)}
+            className={`w-full rounded-md border bg-white px-2.5 py-1.5 text-xs text-black/70 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 ${
+              sex ? 'border-emerald-200' : 'border-black/10'
+            }`}
+          >
+            {SEX_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── School info section with selects ──
+
+const SCHOOL_STATUS_OPTIONS = [
+  { value: '', label: '선택 안 함' },
+  { value: '미취학', label: '미취학' },
+  { value: '초', label: '초등학교' },
+  { value: '중', label: '중학교' },
+  { value: '고', label: '고등학교' },
+];
+
+const SCHOOL_TYPE_OPTIONS = [
+  { value: '', label: '선택 안 함' },
+  { value: '교육청 인가', label: '교육청 인가' },
+  { value: '교육청 비인가', label: '교육청 비인가' },
+  { value: '대안학교', label: '대안학교' },
+];
+
+function SchoolSection({
+  group,
+  fields,
+  caseData,
+  getFieldValue,
+  onFieldChange,
+  onFieldBlur,
+  onManualField,
+}: {
+  group: FieldGroup;
+  fields: AnyField[];
+  caseData: Case;
+  getFieldValue: (pdfField: string, fallback?: string) => string;
+  onFieldChange: (pdfField: string, val: string) => void;
+  onFieldBlur: (pdfField: string, val: string) => void;
+  onManualField: (fieldId: string, val: string) => void;
+}) {
+  const schoolStatus = caseData.manualFields?.school_status ?? '';
+  const schoolType = caseData.manualFields?.school_type ?? '';
+
+  return (
+    <div className="rounded-md bg-black/[0.02] px-3 py-2.5">
+      <p className="mb-2 text-xs font-semibold text-black/50">{group.label}</p>
+
+      {/* Selects row */}
+      <div className="mb-2 grid grid-cols-2 gap-2">
+        <div>
+          <span className="mb-0.5 block text-[11px] font-medium text-black/50">재학 여부</span>
+          <select
+            value={schoolStatus}
+            onChange={(e) => onManualField('school_status', e.target.value)}
+            className={`w-full rounded-md border bg-white px-2.5 py-1.5 text-xs text-black/70 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 ${
+              schoolStatus ? 'border-emerald-200' : 'border-black/10'
+            }`}
+          >
+            {SCHOOL_STATUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <span className="mb-0.5 block text-[11px] font-medium text-black/50">학교 종류</span>
+          <select
+            value={schoolType}
+            onChange={(e) => onManualField('school_type', e.target.value)}
+            className={`w-full rounded-md border bg-white px-2.5 py-1.5 text-xs text-black/70 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 ${
+              schoolType ? 'border-emerald-200' : 'border-black/10'
+            }`}
+          >
+            {SCHOOL_TYPE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Text fields */}
+      <div
+        className="gap-2"
+        style={{ display: 'grid', gridTemplateColumns: group.cols ?? '1fr' }}
+      >
+        {fields.map((f) => {
+          const val = getFieldValue(f.pdfField, f.isMapped ? (f as MappedField).value : '');
+          const filled = val !== '';
+          return (
+            <div key={f.pdfField}>
+              <div className="mb-0.5 flex items-baseline justify-between gap-1">
+                <span className="text-[11px] font-medium text-black/50">{f.label}</span>
+                <span className="text-[9px] text-black/20">{f.pdfField}</span>
+              </div>
+              <input
+                type="text"
+                placeholder={f.label}
+                value={val}
+                onChange={(e) => onFieldChange(f.pdfField, e.target.value)}
+                onBlur={(e) => onFieldBlur(f.pdfField, e.target.value)}
+                className={`w-full rounded-md border bg-white px-2.5 py-1.5 text-xs text-black/70 placeholder:text-black/20 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 ${
+                  filled ? 'border-emerald-200' : 'border-black/10'
+                }`}
+              />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
