@@ -90,12 +90,13 @@ export default function FormConfirmStep({ caseData, onNext, onPrev }: FormConfir
         >
           ← 서류 업로드
         </button>
+
         <button
           type="button"
           onClick={onNext}
           className="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-primary/90"
         >
-          확인, 자동 작성 시작 →
+          다음 단계로 →
         </button>
       </div>
     </div>

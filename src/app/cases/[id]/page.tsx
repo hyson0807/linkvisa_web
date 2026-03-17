@@ -7,7 +7,6 @@ import type { WizardStep } from './_components/shared/StepIndicator';
 import UploadStep from './_components/step1-upload/UploadStep';
 import FormConfirmStep from './_components/step1_5-form-confirm/FormConfirmStep';
 import ReviewStep from './_components/step2-review/ReviewStep';
-import ManualInputStep from './_components/step3-manual/ManualInputStep';
 import OutputStep from './_components/step4-output/OutputStep';
 import StudentLinkPanel from './_components/StudentLinkPanel';
 import { useCaseStore } from '@/store/case-store';
@@ -79,13 +78,10 @@ export default function CaseWorkspacePage({ params }: { params: Promise<{ id: st
           <FormConfirmStep caseData={caseData} onNext={() => setStep('review')} onPrev={() => setStep('upload')} />
         )}
         {step === 'review' && (
-          <ReviewStep caseData={caseData} onNext={() => setStep('manual-input')} onPrev={() => setStep('form-confirm')} />
-        )}
-        {step === 'manual-input' && (
-          <ManualInputStep caseData={caseData} onNext={() => setStep('output')} onPrev={() => setStep('upload')} />
+          <ReviewStep caseData={caseData} onNext={() => setStep('output')} onPrev={() => setStep('form-confirm')} />
         )}
         {step === 'output' && (
-          <OutputStep caseData={caseData} onPrev={() => setStep('manual-input')} />
+          <OutputStep caseData={caseData} onPrev={() => setStep('review')} />
         )}
       </main>
     </div>

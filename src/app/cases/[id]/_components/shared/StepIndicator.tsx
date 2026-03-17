@@ -1,10 +1,11 @@
 'use client';
 
-export type WizardStep = 'upload' | 'form-confirm' | 'review' | 'manual-input' | 'output';
+export type WizardStep = 'upload' | 'form-confirm' | 'review' | 'output';
 
-const publicSteps: { key: Exclude<WizardStep, 'review' | 'form-confirm'>; label: string }[] = [
+const publicSteps: { key: WizardStep; label: string }[] = [
   { key: 'upload', label: '서류업로드' },
-  { key: 'manual-input', label: '정보입력' },
+  { key: 'form-confirm', label: '양식확인' },
+  { key: 'review', label: '데이터추출' },
   { key: 'output', label: '공문서' },
 ];
 
@@ -14,9 +15,7 @@ interface StepIndicatorProps {
 }
 
 export default function StepIndicator({ currentStep, onStepClick }: StepIndicatorProps) {
-  const visualCurrentStep =
-    currentStep === 'review' || currentStep === 'form-confirm' ? 'upload' : currentStep;
-  const currentIndex = publicSteps.findIndex((s) => s.key === visualCurrentStep);
+  const currentIndex = publicSteps.findIndex((s) => s.key === currentStep);
 
   return (
     <div className="flex items-center gap-1">
@@ -37,11 +36,9 @@ export default function StepIndicator({ currentStep, onStepClick }: StepIndicato
             >
               <div
                 className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold transition-colors ${
-                  isActive
+                  isActive || isDone
                     ? 'bg-primary text-white'
-                    : isDone
-                      ? 'bg-primary text-white'
-                      : 'bg-black/10 text-black/30'
+                    : 'bg-black/10 text-black/30'
                 }`}
               >
                 {isDone ? (
