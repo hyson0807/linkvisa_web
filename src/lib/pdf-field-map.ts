@@ -35,8 +35,24 @@ export interface CheckboxMapping {
 // ── Helper: get OCR value from a case ──
 
 export function getOcrValue(c: Case, docType: string, key: string): string {
-  const doc = c.documents.find((d) => d.typeId === docType);
-  return doc?.ocrResult?.[key] ?? '';
+  // 1) Exact typeId match
+  const exact = c.documents.find((d) => d.typeId === docType);
+  if (exact?.ocrResult && key in exact.ocrResult) return exact.ocrResult[key];
+
+  // 2) Fallback: search only custom (user-added) documents
+  for (const d of c.documents) {
+    if (d.isCustom && d.ocrResult && key in d.ocrResult) return d.ocrResult[key];
+  }
+  return '';
+}
+
+/** Try multiple (docType, key) pairs and return the first non-empty value */
+function ocrFallback(c: Case, ...sources: [docType: string, key: string][]): string {
+  for (const [docType, key] of sources) {
+    const v = getOcrValue(c, docType, key);
+    if (v) return v;
+  }
+  return '';
 }
 
 export function getManualValue(c: Case, fieldId: string): string {
@@ -130,6 +146,10 @@ export function applyTransform(value: string, transform: Transform | undefined, 
 // c13-c16: school status (미취학, 초, 중, 고)
 // c17-c18: school type
 
+function getSex(c: Case): string {
+  return ocrFallback(c, ['passport', '성별'], ['alien_registration', '성별']).toUpperCase();
+}
+
 export const checkboxMappings: CheckboxMapping[] = [
   { field: 'c1', condition: (c) => c.applicationType === '외국인등록' },
   { field: 'c2', condition: (c) => c.applicationType === '등록증재발급' },
@@ -141,9 +161,9 @@ export const checkboxMappings: CheckboxMapping[] = [
   { field: 'c8', condition: () => false }, // 재입국허가
   { field: 'c9', condition: (c) => c.applicationType === '체류지변경신고' },
   { field: 'c10', condition: (c) => c.applicationType === '등록사항변경신고' },
-  // Sex
-  { field: 'c11', condition: (c) => getOcrValue(c, 'passport', '성별') === '남' || getOcrValue(c, 'passport', '성별').toUpperCase() === 'M' },
-  { field: 'c12', condition: (c) => getOcrValue(c, 'passport', '성별') === '여' || getOcrValue(c, 'passport', '성별').toUpperCase() === 'F' },
+  // Sex (passport → alien_registration fallback)
+  { field: 'c11', condition: (c) => { const v = getSex(c); return v === '남' || v === 'M'; } },
+  { field: 'c12', condition: (c) => { const v = getSex(c); return v === '여' || v === 'F'; } },
 ];
 
 // ── Text field mappings ──
@@ -336,32 +356,32 @@ export const textFieldMappings: TextFieldMapping[] = [
     source: { type: 'computed', fn: (c) => c.applicationType === '체류자격부여' ? c.visaType : '' },
   },
 
-  // Name
+  // Name (passport → alien_registration fallback)
   {
     field: 't7',
-    source: { type: 'ocr', docType: 'passport', key: '성명(영문)' },
+    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '성명(영문)'], ['alien_registration', '성명']) },
     transform: 'split-surname',
   },
   {
     field: 't8',
-    source: { type: 'ocr', docType: 'passport', key: '성명(영문)' },
+    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '성명(영문)'], ['alien_registration', '성명']) },
     transform: 'split-given',
   },
 
-  // Date of birth
+  // Date of birth (passport → alien_registration fallback)
   {
     field: 't9',
-    source: { type: 'ocr', docType: 'passport', key: '생년월일' },
+    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '생년월일'], ['alien_registration', '생년월일']) },
     transform: 'date-yyyy',
   },
   {
     field: 't10',
-    source: { type: 'ocr', docType: 'passport', key: '생년월일' },
+    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '생년월일'], ['alien_registration', '생년월일']) },
     transform: 'date-mm',
   },
   {
     field: 't11',
-    source: { type: 'ocr', docType: 'passport', key: '생년월일' },
+    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '생년월일'], ['alien_registration', '생년월일']) },
     transform: 'date-dd',
   },
 
@@ -373,10 +393,10 @@ export const textFieldMappings: TextFieldMapping[] = [
     digitIndex: i,
   })),
 
-  // Nationality
+  // Nationality (passport → alien_registration fallback)
   {
     field: 't25',
-    source: { type: 'ocr', docType: 'passport', key: '국적' },
+    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '국적'], ['alien_registration', '국적']) },
   },
 
   // Passport
@@ -450,7 +470,7 @@ export const textFieldMappings: TextFieldMapping[] = [
   {
     field: 't43',
     source: { type: 'computed', fn: (c) =>
-      getOcrValue(c, 'employment_contract', '근무내용') || getOcrValue(c, 'employment_contract', '직위')
+      ocrFallback(c, ['employment_contract', '근무내용'], ['employment_contract', '직위'])
     },
   },
 

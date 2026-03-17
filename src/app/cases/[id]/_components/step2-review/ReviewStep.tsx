@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useCaseStore } from '@/store/case-store';
 import { resolveDocsWithType } from '@/lib/document-registry';
 import { caseApi } from '@/lib/case-api';
@@ -21,7 +21,6 @@ type OcrStatus = 'processing' | 'done';
 export default function ReviewStep({ caseData, onNext, onPrev }: ReviewStepProps) {
   const [status, setStatus] = useState<OcrStatus>('processing');
   const [currentDocName, setCurrentDocName] = useState('');
-  const processedRef = useRef(false);
   const setOcrResult = useCaseStore((s) => s.setOcrResult);
   const setAiContent = useCaseStore((s) => s.setAiContent);
 
@@ -44,47 +43,57 @@ export default function ReviewStep({ caseData, onNext, onPrev }: ReviewStepProps
   );
 
   useEffect(() => {
-    if (processedRef.current) return;
-    processedRef.current = true;
+    let cancelled = false;
+    setStatus('processing');
+    setCurrentDocName('');
 
     const caseId = caseData.id;
     const manualFields = caseData.manualFields;
 
     (async () => {
       await Promise.allSettled([
-        // 1) Upload docs → real OCR
+        // 1) Upload docs → real OCR (always re-run)
         (async () => {
+          // Clear old OCR results for docs without files
+          for (const d of resolved.ocrDocs.filter((d) => !hasFiles(d.caseDoc) && d.caseDoc.ocrResult)) {
+            setOcrResult(caseId, d.caseDoc.id, {});
+          }
           for (const d of resolved.ocrDocs.filter((d) => hasFiles(d.caseDoc))) {
+            if (cancelled) return;
             setCurrentDocName(d.docType.label);
             try {
               const { result } = await caseApi.runOcr(caseId, d.caseDoc.id);
-              setOcrResult(caseId, d.caseDoc.id, result);
+              if (!cancelled) setOcrResult(caseId, d.caseDoc.id, result);
             } catch (err) {
               console.error(`OCR failed for ${d.docType.id}:`, err);
-              setOcrResult(caseId, d.caseDoc.id, {});
+              if (!cancelled) setOcrResult(caseId, d.caseDoc.id, {});
             }
           }
         })(),
-        // 2) Form-generate docs → mock OCR
+        // 2) Form-generate docs → mock OCR (skip if already done)
         (async () => {
           for (const d of resolved.formGenDocs.filter((d) => !d.caseDoc.ocrResult)) {
+            if (cancelled) return;
             setCurrentDocName(d.docType.label);
             const result = await runMockOcr(d.docType.id);
-            setOcrResult(caseId, d.caseDoc.id, result);
+            if (!cancelled) setOcrResult(caseId, d.caseDoc.id, result);
           }
         })(),
-        // 3) AI-generate docs → mock AI generate
+        // 3) AI-generate docs → mock AI generate (skip if already done)
         (async () => {
           for (const d of resolved.aiDocs.filter((d) => !d.caseDoc.aiContent)) {
+            if (cancelled) return;
             setCurrentDocName(d.docType.label);
             const content = await runMockAiGenerate(d.docType.id, '', manualFields);
-            setAiContent(caseId, d.caseDoc.id, content);
+            if (!cancelled) setAiContent(caseId, d.caseDoc.id, content);
           }
         })(),
       ]);
 
-      setStatus('done');
+      if (!cancelled) setStatus('done');
     })();
+
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

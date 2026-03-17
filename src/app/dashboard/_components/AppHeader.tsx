@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
-import { onSessionRefresh } from '@/lib/api';
+import { onSessionRefresh, refreshAccessToken } from '@/lib/api';
 
 const ACCESS_TOKEN_LIFETIME_SECONDS = 15 * 60; // 15분
 const PROACTIVE_REFRESH_SECONDS = 60; // 만료 1분 전에 선제 갱신
@@ -13,9 +13,11 @@ export default function AppHeader() {
   const router = useRouter();
   const logout = useAuthStore((s) => s.logout);
   const [remaining, setRemaining] = useState(ACCESS_TOKEN_LIFETIME_SECONDS);
+  const refreshTriggered = useRef(false);
 
   const resetTimer = useCallback((remainingMs: number) => {
     setRemaining(Math.floor(remainingMs / 1000));
+    refreshTriggered.current = false;
   }, []);
 
   // 세션 갱신 이벤트 구독 → 타이머 리셋
@@ -25,35 +27,25 @@ export default function AppHeader() {
 
   // 만료 1분 전 선제적 토큰 갱신
   useEffect(() => {
-    if (remaining !== PROACTIVE_REFRESH_SECONDS) return;
+    if (remaining > PROACTIVE_REFRESH_SECONDS || refreshTriggered.current) return;
+    refreshTriggered.current = true;
 
-    (async () => {
-      try {
-        const res = await fetch('/api/auth/refresh', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        });
-        if (res.ok) {
-          setRemaining(ACCESS_TOKEN_LIFETIME_SECONDS);
-        } else {
-          // refresh 실패 → 로그아웃
-          await logout();
-          router.push('/login');
-        }
-      } catch {
+    refreshAccessToken().then(async (ok) => {
+      if (!ok) {
         await logout();
         router.push('/login');
       }
-    })();
+    });
   }, [remaining, logout, router]);
 
+  // remaining > 0일 때만 카운트다운
   useEffect(() => {
+    if (remaining <= 0) return;
     const timer = setInterval(() => {
       setRemaining((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [remaining > 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;

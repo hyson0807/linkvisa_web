@@ -27,7 +27,7 @@ export const documentRegistry: DocumentTypeDef[] = [
     category: 'foreigner',
     source: 'upload',
     step: 'ocr',
-    ocrFields: ['성명', '외국인등록번호', '체류자격', '체류기간'],
+    ocrFields: ['성명', '외국인등록번호', '성별', '생년월일', '국적', '체류자격', '체류기간'],
     requiredForVisas: ['E-7', 'D-4', 'F-5', 'F-2', 'H-2'],
   },
 

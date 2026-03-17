@@ -28,7 +28,7 @@ function notifySessionRefresh(remainingMs: number) {
 const ACCESS_TOKEN_LIFETIME_MS = 15 * 60 * 1000; // 15분
 let refreshPromise: Promise<boolean> | null = null;
 
-async function refreshAccessToken(): Promise<boolean> {
+export async function refreshAccessToken(): Promise<boolean> {
   // 동시 다발적 401에 대해 refresh 요청을 한 번만 보냄
   if (refreshPromise) return refreshPromise;
 
@@ -83,7 +83,7 @@ export async function api<T = unknown>(
   let res = await fetch(path, mergedOptions);
 
   // 401이면 토큰 갱신 후 한 번 재시도 (refresh 엔드포인트 자체는 제외)
-  if (res.status === 401 && !path.includes('/auth/refresh') && !path.includes('/auth/login')) {
+  if (res.status === 401 && path !== '/api/auth/refresh' && path !== '/api/auth/login') {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
       res = await fetch(path, mergedOptions);
