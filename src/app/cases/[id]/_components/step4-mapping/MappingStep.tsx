@@ -10,7 +10,6 @@ import {
   ALIEN_REG_FIELDS,
   APP_TYPE_QUAL_FIELDS,
   UNIFIED_FIELD_GROUPS,
-  GROUPED_FIELDS,
   getDefaultValue,
   type FieldGroup,
   type AnyField,
@@ -139,11 +138,20 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
                   const qualGroup: FieldGroup[] = qualFields
                     ? [{ id: 'qual', label: '신청 자격', fields: qualFields, cols: '1fr 1fr' }]
                     : [];
-                  const groups = isUnified ? [...qualGroup, ...UNIFIED_FIELD_GROUPS] : [];
+                  const groups = isUnified
+                    ? [...qualGroup, ...UNIFIED_FIELD_GROUPS]
+                    : (formDef.fieldGroups ?? []);
+                  const allGroupedFields = new Set(groups.flatMap((g) => g.fields));
+                  // For unified, exclude all qual fields (t1-t6) even if only one pair is active
+                  if (isUnified) {
+                    for (const fields of Object.values(APP_TYPE_QUAL_FIELDS)) {
+                      for (const f of fields) allGroupedFields.add(f);
+                    }
+                  }
 
                   // Fields not in any group
                   const ungroupedFields = [...fieldMap.entries()]
-                    .filter(([key]) => !isUnified || !GROUPED_FIELDS.has(key))
+                    .filter(([key]) => !allGroupedFields.has(key))
                     .map(([, f]) => f);
 
                   return (

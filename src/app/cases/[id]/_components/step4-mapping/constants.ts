@@ -1,16 +1,10 @@
 import type { MappedField, UnmappedField } from '@/lib/pdf/analyze';
+import type { FieldGroup } from '@/lib/pdf/form-registry';
+export type { FieldGroup };
 
 // ── Field grouping definitions ──
 
 export const ALIEN_REG_FIELDS = Array.from({ length: 13 }, (_, i) => `t${12 + i}`);
-
-export interface FieldGroup {
-  id: string;
-  label: string;
-  fields: string[];
-  /** grid column template, e.g. '1fr 1fr' or '2fr 1fr 1fr' */
-  cols?: string;
-}
 
 // applicationType → 신청 자격 필드 매핑
 export const APP_TYPE_QUAL_FIELDS: Record<string, string[]> = {
@@ -33,12 +27,6 @@ export const UNIFIED_FIELD_GROUPS: FieldGroup[] = [
   { id: 'income', label: '소득 · 직업', fields: ['t42', 't43'], cols: '1fr 1fr' },
   { id: 'etc', label: '기타', fields: ['t44', 't45', 't46', 't47'], cols: '1fr 1fr' },
 ];
-
-// All grouped field ids (flat set) – includes all 신청 자격 fields (t1-t6) even though they're conditionally shown
-export const GROUPED_FIELDS = new Set([
-  ...UNIFIED_FIELD_GROUPS.flatMap((g) => g.fields),
-  't1', 't2', 't3', 't4', 't5', 't6',
-]);
 
 // ── Types ──
 

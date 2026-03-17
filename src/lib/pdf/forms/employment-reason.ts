@@ -1,5 +1,5 @@
 import type { Case } from '@/types/case';
-import type { FormDefinition } from '../form-registry';
+import type { FormDefinition, FieldGroup } from '../form-registry';
 import type { TextFieldMapping, CheckboxMapping } from '../field-utils';
 import { ocrFallback } from '../field-utils';
 
@@ -41,13 +41,19 @@ const textFieldMappings: TextFieldMapping[] = [
   { field: 't18', source: { type: 'manual', fieldId: 'applicant_phone_kr' } },
   {
     field: 't19',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['degree_cert', '학교명']) },
+    source: { type: 'computed', fn: (c) => ocrFallback(c, ['degree_cert', '학교명'], ['graduation_cert', '학교명']) },
   },
-  { field: 't20', source: { type: 'ocr', docType: 'degree_cert', key: '학위' } },
-  { field: 't21', source: { type: 'ocr', docType: 'degree_cert', key: '전공' } },
+  {
+    field: 't20',
+    source: { type: 'computed', fn: (c) => ocrFallback(c, ['degree_cert', '학위'], ['graduation_cert', '학위']) },
+  },
+  {
+    field: 't21',
+    source: { type: 'computed', fn: (c) => ocrFallback(c, ['degree_cert', '전공'], ['graduation_cert', '전공']) },
+  },
   {
     field: 't22',
-    source: { type: 'ocr', docType: 'degree_cert', key: '졸업일자' },
+    source: { type: 'computed', fn: (c) => ocrFallback(c, ['degree_cert', '졸업일자'], ['graduation_cert', '졸업일자']) },
     transform: 'date-yyyy',
   },
   { field: 't23', source: { type: 'manual', fieldId: 'career1_company' } },
@@ -123,6 +129,30 @@ const fieldLabels: Record<string, string> = {
 
 const checkboxLabels: Record<string, string> = {};
 
+const fieldGroups: FieldGroup[] = [
+  {
+    id: 'company',
+    label: '고용기업 사항',
+    fields: ['t1', 't2', 't3', 't4', 't5', 't6', 't7', 't8', 't9', 't10', 't11'],
+    cols: '1fr 1fr',
+  },
+  {
+    id: 'applicant',
+    label: '전문외국인력 이력개요',
+    fields: [
+      't12', 't13', 't14', 't15', 't16', 't17', 't18', 't19', 't20',
+      't21', 't22', 't23', 't24', 't25', 't26', 't27', 't28', 't29', 't30',
+      't31', 't32', 't33', 't34', 't35', 't36',
+    ],
+    cols: '1fr 1fr',
+  },
+  {
+    id: 'reason',
+    label: '고용사유 및 인력활용계획',
+    fields: ['t37', 't38', 't39', 't40'],
+  },
+];
+
 export const employmentReasonForm: FormDefinition = {
   id: 'employment_reason',
   label: '고용사유서',
@@ -131,6 +161,7 @@ export const employmentReasonForm: FormDefinition = {
   checkboxMappings,
   fieldLabels,
   checkboxLabels,
+  fieldGroups,
   applicableVisas: ['E-7'],
   buildFileName: (caseData: Case) => {
     const name = caseData.foreignerName?.replace(/\s+/g, '_') || 'applicant';
