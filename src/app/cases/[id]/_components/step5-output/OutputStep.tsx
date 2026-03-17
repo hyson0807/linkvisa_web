@@ -17,17 +17,29 @@ export default function OutputStep({ caseData, onPrev }: OutputStepProps) {
   const forms = useMemo(() => getFormsForCase(caseData), [caseData]);
   const { downloading, downloadingFormId, downloadForm, downloadAll } = usePdfDownload(caseData);
 
-  // Generate preview for unified_application (or first form)
-  const previewForm = useMemo(
-    () => forms.find((f) => f.id === 'unified_application') ?? forms[0],
-    [forms],
+  const [activeFormId, setActiveFormId] = useState<string>(
+    forms.length > 0 ? forms[0].id : '',
   );
+
+  const previewForm = useMemo(
+    () => forms.find((f) => f.id === activeFormId) ?? forms[0],
+    [forms, activeFormId],
+  );
+
+  const hasMappings = (formDef: (typeof forms)[number]) =>
+    formDef.textFieldMappings.length > 0 || formDef.checkboxMappings.length > 0;
+
+  const activeHasMappings = previewForm ? hasMappings(previewForm) : false;
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
-    if (!previewForm) return;
+    if (!previewForm || !activeHasMappings) {
+      setPreviewUrl(null);
+      setPreviewLoading(false);
+      return;
+    }
     let revoked = false;
 
     setPreviewLoading(true);
@@ -73,25 +85,61 @@ export default function OutputStep({ caseData, onPrev }: OutputStepProps) {
 
       {/* PDF Preview */}
       <div className="mb-6 rounded-xl border border-black/5 bg-white shadow-sm overflow-hidden">
-        <div className="border-b border-black/5 px-4 py-3 flex items-center justify-between">
-          <p className="text-sm font-semibold text-black/70">
-            {previewForm?.label ?? 'PDF 미리보기'}
-          </p>
+        {/* Tab bar */}
+        <div className="flex border-b border-black/5 overflow-x-auto">
+          {forms.map((formDef) => {
+            const isActive = activeFormId === formDef.id;
+            const hasMappingData = hasMappings(formDef);
+
+            return (
+              <button
+                key={formDef.id}
+                type="button"
+                onClick={() => setActiveFormId(formDef.id)}
+                className={`relative shrink-0 px-4 py-3 text-left transition-colors ${
+                  isActive
+                    ? 'bg-white'
+                    : 'bg-black/[0.02] hover:bg-black/[0.04]'
+                }`}
+              >
+                <span className={`block text-xs font-semibold whitespace-nowrap ${
+                  isActive ? 'text-primary' : 'text-black/50'
+                }`}>
+                  {formDef.label}
+                </span>
+                {!hasMappingData && (
+                  <span className="block mt-0.5 text-[10px] text-black/25">준비중</span>
+                )}
+                {isActive && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
+              </button>
+            );
+          })}
         </div>
-        {previewLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
-        ) : previewUrl ? (
-          <iframe
-            src={previewUrl}
-            className="w-full border-0"
-            style={{ height: '70vh' }}
-            title="PDF 미리보기"
-          />
+
+        {/* Tab content */}
+        {activeHasMappings ? (
+          previewLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+          ) : previewUrl ? (
+            <iframe
+              src={previewUrl}
+              className="w-full border-0"
+              style={{ height: '70vh' }}
+              title="PDF 미리보기"
+            />
+          ) : (
+            <div className="flex items-center justify-center py-20">
+              <p className="text-sm text-black/40">PDF를 생성할 수 없습니다.</p>
+            </div>
+          )
         ) : (
-          <div className="flex items-center justify-center py-20">
-            <p className="text-sm text-black/40">PDF를 생성할 수 없습니다.</p>
+          <div className="flex flex-col items-center justify-center py-20">
+            <p className="text-sm font-medium text-black/30">준비중</p>
+            <p className="mt-1 text-xs text-black/20">PDF 템플릿 준비 후 미리보기가 제공됩니다.</p>
           </div>
         )}
       </div>

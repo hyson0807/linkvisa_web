@@ -143,7 +143,7 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
 
                   // Fields not in any group
                   const ungroupedFields = [...fieldMap.entries()]
-                    .filter(([key]) => !GROUPED_FIELDS.has(key))
+                    .filter(([key]) => !isUnified || !GROUPED_FIELDS.has(key))
                     .map(([, f]) => f);
 
                   return (
