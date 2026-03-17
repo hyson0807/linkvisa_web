@@ -28,9 +28,6 @@ export function analyzeMappingStatus(formDef: FormDefinition, caseData: Case): M
 
   // 1. Analyze text field mappings
   for (const m of formDef.textFieldMappings) {
-    // Skip intentionally empty static fields
-    if (m.source.type === 'static' && m.source.value === '') continue;
-
     const manualOverride = caseData.manualFields?.[m.field];
     const rawValue = manualOverride || resolveSource(caseData, m.source);
     const value = applyTransform(rawValue, m.transform, m.digitIndex);

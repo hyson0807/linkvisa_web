@@ -1,17 +1,53 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import type { Case } from '@/types/case';
 import '@/lib/pdf/forms';
 import { getFormsForCase } from '@/lib/pdf/form-registry';
-import { analyzeMappingStatus } from '@/lib/pdf/analyze';
+import { analyzeMappingStatus, type MappedField, type UnmappedField } from '@/lib/pdf/analyze';
 import { useCaseStore } from '@/store/case-store';
+
+// ── Field grouping definitions ──
+
+const ALIEN_REG_FIELDS = Array.from({ length: 13 }, (_, i) => `t${12 + i}`);
+
+interface FieldGroup {
+  label: string;
+  fields: string[];
+  /** grid column template, e.g. '1fr 1fr' or '2fr 1fr 1fr' */
+  cols?: string;
+}
+
+const UNIFIED_FIELD_GROUPS: FieldGroup[] = [
+  { label: '신청 자격', fields: ['t1', 't2', 't3', 't4', 't5', 't6'], cols: '1fr 1fr' },
+  { label: '성명', fields: ['t7', 't8'], cols: '1fr 1fr' },
+  { label: '생년월일', fields: ['t9', 't10', 't11'], cols: '1fr 1fr 1fr' },
+  { label: '외국인등록번호', fields: ALIEN_REG_FIELDS },
+  { label: '국적', fields: ['t25'] },
+  { label: '여권 정보', fields: ['t26', 't27', 't28'], cols: '1fr 1fr 1fr' },
+  { label: '연락처 (국내)', fields: ['t29', 't30', 't31'], cols: '2fr 1fr 1fr' },
+  { label: '연락처 (본국)', fields: ['t32', 't33'], cols: '2fr 1fr' },
+  { label: '학교 정보', fields: ['t34', 't35'], cols: '2fr 1fr' },
+  { label: '원 근무처', fields: ['t36', 't37', 't38'], cols: '1fr 1fr 1fr' },
+  { label: '예정 근무처', fields: ['t39', 't40', 't41'], cols: '1fr 1fr 1fr' },
+  { label: '소득 · 직업', fields: ['t42', 't43'], cols: '1fr 1fr' },
+  { label: '기타', fields: ['t44', 't45', 't46', 't47'], cols: '1fr 1fr' },
+];
+
+// All grouped field ids (flat set)
+const GROUPED_FIELDS = new Set(UNIFIED_FIELD_GROUPS.flatMap((g) => g.fields));
+
+// ── Types ──
+
+type AnyField = (MappedField | UnmappedField) & { isMapped: boolean };
 
 interface MappingStepProps {
   caseData: Case;
   onNext: () => void;
   onPrev: () => void;
 }
+
+// ── Main component ──
 
 export default function MappingStep({ caseData, onNext, onPrev }: MappingStepProps) {
   const forms = useMemo(() => getFormsForCase(caseData), [caseData]);
@@ -21,7 +57,6 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
     forms.length > 0 ? forms[0].id : null,
   );
 
-  // Local state for input fields — synced to store on blur
   const [localInputs, setLocalInputs] = useState<Record<string, string>>({});
 
   const formAnalyses = useMemo(
@@ -36,9 +71,22 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
     formDef.textFieldMappings.length > 0 || formDef.checkboxMappings.length > 0;
 
   const handleInputBlur = (pdfField: string, value: string) => {
-    if (value.trim()) {
-      setManualField(caseData.id, pdfField, value.trim());
-    }
+    setManualField(caseData.id, pdfField, value.trim());
+  };
+
+  const handleInputChange = (pdfField: string, value: string) => {
+    setLocalInputs((prev) => ({ ...prev, [pdfField]: value }));
+  };
+
+  const getFieldValue = (pdfField: string, fallback?: string) =>
+    localInputs[pdfField] ?? caseData.manualFields?.[pdfField] ?? fallback ?? '';
+
+  /** Build a lookup from pdfField → AnyField (mapped or unmapped) */
+  const buildFieldMap = (analysis: ReturnType<typeof analyzeMappingStatus>) => {
+    const map = new Map<string, AnyField>();
+    for (const f of analysis.mapped) map.set(f.pdfField, { ...f, isMapped: true });
+    for (const f of analysis.unmapped) map.set(f.pdfField, { ...f, isMapped: false });
+    return map;
   };
 
   return (
@@ -47,7 +95,7 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
       <div className="mb-6">
         <h2 className="text-lg font-semibold text-gray-900">매핑 확인</h2>
         <p className="mt-1 text-sm text-gray-500">
-          PDF 양식에 매핑된 데이터를 확인하고, 미입력 필드를 직접 입력하세요.
+          PDF 양식에 매핑된 데이터를 확인하고, 값을 직접 수정하세요.
         </p>
       </div>
 
@@ -95,96 +143,96 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
                   {!hasMappingData ? (
                     <p className="text-xs text-black/30 py-2">PDF 템플릿 준비 후 매핑이 추가됩니다.</p>
                   ) : (
-                    <>
-                      {/* Mapped fields */}
-                      {analysis.mapped.length > 0 && (
-                        <div className="mb-4">
-                          <div className="mb-2 flex items-center gap-1.5">
-                            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                              <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                              </svg>
-                            </span>
-                            <span className="text-xs font-semibold text-emerald-700">
-                              매핑 완료 ({analysis.mapped.length})
-                            </span>
-                          </div>
-                          <div className="space-y-1">
-                            {analysis.mapped.map((f) => (
-                              <div key={f.pdfField} className="rounded-md bg-emerald-50/50 px-3 py-2">
-                                <div className="flex items-baseline justify-between gap-2">
-                                  <span className="text-xs font-medium text-black/60">{f.label}</span>
-                                  <span className="text-[10px] text-black/30">{f.pdfField}</span>
-                                </div>
-                                <p className="mt-0.5 text-xs text-black/70 break-all">{f.value}</p>
-                                <p className="mt-0.5 text-[10px] text-black/30">{f.sourceDesc}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                    (() => {
+                      const fieldMap = buildFieldMap(analysis);
+                      const isUnified = formDef.id === 'unified_application';
+                      const groups = isUnified ? UNIFIED_FIELD_GROUPS : [];
 
-                      {/* Checked checkboxes */}
-                      {analysis.checkedBoxes.length > 0 && (
-                        <div className="mb-4">
-                          <div className="mb-2 flex items-center gap-1.5">
-                            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                              <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                              </svg>
-                            </span>
-                            <span className="text-xs font-semibold text-blue-700">
-                              체크박스 ({analysis.checkedBoxes.length})
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {analysis.checkedBoxes.map((label) => (
-                              <span
-                                key={label}
-                                className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700"
-                              >
-                                {label}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      // Fields not in any group
+                      const ungroupedFields = [...fieldMap.entries()]
+                        .filter(([key]) => !GROUPED_FIELDS.has(key))
+                        .map(([, f]) => f);
 
-                      {/* Unmapped fields with input */}
-                      {analysis.unmapped.length > 0 && (
-                        <div>
-                          <div className="mb-2 flex items-center gap-1.5">
-                            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 text-amber-600">
-                              <svg className="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M10 3a1 1 0 011 1v5a1 1 0 11-2 0V4a1 1 0 011-1zm0 10a1 1 0 100 2 1 1 0 000-2z" />
-                              </svg>
-                            </span>
-                            <span className="text-xs font-semibold text-amber-700">
-                              미입력 ({analysis.unmapped.length})
-                            </span>
-                          </div>
-                          <div className="space-y-1.5">
-                            {analysis.unmapped.map((f) => (
-                              <div key={f.pdfField} className="rounded-md bg-amber-50/50 px-3 py-2">
-                                <div className="flex items-baseline justify-between gap-2 mb-1">
-                                  <span className="text-xs font-medium text-black/60">{f.label}</span>
-                                  <span className="text-[10px] text-black/30">{f.pdfField}</span>
-                                </div>
-                                <input
-                                  type="text"
-                                  placeholder={`${f.label} 입력`}
-                                  value={localInputs[f.pdfField] ?? caseData.manualFields?.[f.pdfField] ?? ''}
-                                  onChange={(e) => setLocalInputs((prev) => ({ ...prev, [f.pdfField]: e.target.value }))}
-                                  onBlur={(e) => handleInputBlur(f.pdfField, e.target.value)}
-                                  className="w-full rounded-md border border-amber-200 bg-white px-2.5 py-1.5 text-xs text-black/70 placeholder:text-black/25 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      return (
+                        <div className="space-y-3">
+                          {/* Grouped sections (unified_application only) */}
+                          {groups.map((group) => {
+                            const groupFields = group.fields
+                              .map((f) => fieldMap.get(f))
+                              .filter((f): f is AnyField => !!f);
+                            if (groupFields.length === 0) return null;
+
+                            // Special: alien reg row
+                            if (group.label === '외국인등록번호') {
+                              const digits = ALIEN_REG_FIELDS.map((field) => {
+                                const mapped = analysis.mapped.find((f) => f.pdfField === field);
+                                return getFieldValue(field, mapped?.value);
+                              });
+                              return (
+                                <AlienRegRow
+                                  key={group.label}
+                                  digits={digits}
+                                  onDigitChange={(idx, val) => handleInputChange(ALIEN_REG_FIELDS[idx], val)}
+                                  onDigitBlur={(idx, val) => handleInputBlur(ALIEN_REG_FIELDS[idx], val)}
                                 />
-                                <p className="mt-1 text-[10px] text-black/30">{f.sourceDesc}</p>
+                              );
+                            }
+
+                            return (
+                              <FieldGroupSection
+                                key={group.label}
+                                group={group}
+                                fields={groupFields}
+                                getFieldValue={getFieldValue}
+                                onFieldChange={handleInputChange}
+                                onFieldBlur={handleInputBlur}
+                              />
+                            );
+                          })}
+
+                          {/* Ungrouped fields (other forms, or fields not in groups) */}
+                          {ungroupedFields.length > 0 && (
+                            <div className="space-y-1">
+                              {ungroupedFields.map((f) => (
+                                <FieldInput
+                                  key={f.pdfField}
+                                  field={f}
+                                  value={getFieldValue(f.pdfField, f.isMapped ? (f as MappedField).value : '')}
+                                  onChange={(val) => handleInputChange(f.pdfField, val)}
+                                  onBlur={(val) => handleInputBlur(f.pdfField, val)}
+                                />
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Checked checkboxes */}
+                          {analysis.checkedBoxes.length > 0 && (
+                            <div className="rounded-md bg-blue-50/50 px-3 py-2.5">
+                              <div className="mb-2 flex items-center gap-1.5">
+                                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                                  <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </span>
+                                <span className="text-xs font-semibold text-blue-700">
+                                  체크박스 ({analysis.checkedBoxes.length})
+                                </span>
                               </div>
-                            ))}
-                          </div>
+                              <div className="flex flex-wrap gap-1">
+                                {analysis.checkedBoxes.map((label) => (
+                                  <span
+                                    key={label}
+                                    className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700"
+                                  >
+                                    {label}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </>
+                      );
+                    })()
                   )}
                 </div>
               )}
@@ -209,6 +257,149 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
         >
           공문서 확인 →
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Grouped section card ──
+
+function FieldGroupSection({
+  group,
+  fields,
+  getFieldValue,
+  onFieldChange,
+  onFieldBlur,
+}: {
+  group: FieldGroup;
+  fields: AnyField[];
+  getFieldValue: (pdfField: string, fallback?: string) => string;
+  onFieldChange: (pdfField: string, val: string) => void;
+  onFieldBlur: (pdfField: string, val: string) => void;
+}) {
+  const allFilled = fields.every(
+    (f) => getFieldValue(f.pdfField, f.isMapped ? (f as MappedField).value : '') !== '',
+  );
+
+  return (
+    <div className={`rounded-md px-3 py-2.5 ${allFilled ? 'bg-emerald-50/50' : 'bg-black/[0.02]'}`}>
+      <p className="mb-2 text-xs font-semibold text-black/50">{group.label}</p>
+      <div
+        className="gap-2"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: group.cols ?? '1fr',
+        }}
+      >
+        {fields.map((f) => {
+          const val = getFieldValue(f.pdfField, f.isMapped ? (f as MappedField).value : '');
+          const filled = val !== '';
+          return (
+            <div key={f.pdfField}>
+              <div className="mb-0.5 flex items-baseline justify-between gap-1">
+                <span className="text-[11px] font-medium text-black/50">{f.label}</span>
+                <span className="text-[9px] text-black/20">{f.pdfField}</span>
+              </div>
+              <input
+                type="text"
+                placeholder={f.label}
+                value={val}
+                onChange={(e) => onFieldChange(f.pdfField, e.target.value)}
+                onBlur={(e) => onFieldBlur(f.pdfField, e.target.value)}
+                className={`w-full rounded-md border bg-white px-2.5 py-1.5 text-xs text-black/70 placeholder:text-black/20 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 ${
+                  filled ? 'border-emerald-200' : 'border-black/10'
+                }`}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Single field input (for ungrouped) ──
+
+function FieldInput({
+  field,
+  value,
+  onChange,
+  onBlur,
+}: {
+  field: AnyField;
+  value: string;
+  onChange: (val: string) => void;
+  onBlur: (val: string) => void;
+}) {
+  const filled = value !== '';
+  return (
+    <div className={`rounded-md px-3 py-2 ${filled ? 'bg-emerald-50/50' : 'bg-amber-50/50'}`}>
+      <div className="flex items-baseline justify-between gap-2 mb-1">
+        <span className="text-xs font-medium text-black/60">{field.label}</span>
+        <span className="text-[10px] text-black/30">{field.pdfField}</span>
+      </div>
+      <input
+        type="text"
+        placeholder={`${field.label} 입력`}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={(e) => onBlur(e.target.value)}
+        className={`w-full rounded-md border bg-white px-2.5 py-1.5 text-xs text-black/70 placeholder:text-black/25 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 ${
+          filled ? 'border-emerald-200' : 'border-amber-200'
+        }`}
+      />
+    </div>
+  );
+}
+
+// ── Alien Registration Number: 13-digit inline row ──
+
+function AlienRegRow({
+  digits,
+  onDigitChange,
+  onDigitBlur,
+}: {
+  digits: string[];
+  onDigitChange: (idx: number, val: string) => void;
+  onDigitBlur: (idx: number, val: string) => void;
+}) {
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const filled = digits.some((d) => d !== '');
+
+  return (
+    <div className={`rounded-md px-3 py-2.5 ${filled ? 'bg-emerald-50/50' : 'bg-black/[0.02]'}`}>
+      <p className="mb-2 text-xs font-semibold text-black/50">외국인등록번호</p>
+      <div className="flex items-center gap-0.5">
+        {digits.map((digit, i) => (
+          <span key={i} className="contents">
+            {i === 6 && (
+              <span className="mx-1 text-sm font-bold text-black/30">-</span>
+            )}
+            <input
+              ref={(el) => { inputRefs.current[i] = el; }}
+              type="text"
+              inputMode="numeric"
+              maxLength={1}
+              value={digit}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '').slice(0, 1);
+                onDigitChange(i, val);
+                if (val && i < 12) {
+                  inputRefs.current[i + 1]?.focus();
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Backspace' && !e.currentTarget.value && i > 0) {
+                  inputRefs.current[i - 1]?.focus();
+                }
+              }}
+              onBlur={(e) => onDigitBlur(i, e.target.value)}
+              className={`h-8 w-6 rounded border text-center text-sm font-mono focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 ${
+                filled ? 'border-emerald-200 bg-white' : 'border-black/10 bg-white'
+              }`}
+            />
+          </span>
+        ))}
       </div>
     </div>
   );

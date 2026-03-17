@@ -24,6 +24,15 @@ const checkboxMappings: CheckboxMapping[] = [
   { field: 'c10', condition: (c) => c.applicationType === '등록사항변경신고' },
   { field: 'c11', condition: (c) => { const v = getSex(c); return v === '남' || v === 'M'; } },
   { field: 'c12', condition: (c) => { const v = getSex(c); return v === '여' || v === 'F'; } },
+  // School status (재학 여부)
+  { field: 'c13', condition: (c) => c.manualFields?.school_status === '미취학' },
+  { field: 'c14', condition: (c) => c.manualFields?.school_status === '초' },
+  { field: 'c15', condition: (c) => c.manualFields?.school_status === '중' },
+  { field: 'c16', condition: (c) => c.manualFields?.school_status === '고' },
+  // School type (학교 종류)
+  { field: 'c17', condition: (c) => c.manualFields?.school_type === '교육청 인가' },
+  { field: 'c18', condition: (c) => c.manualFields?.school_type === '교육청 비인가' },
+  { field: 'c19', condition: (c) => c.manualFields?.school_type === '대안학교' },
 ];
 
 // ── Text field mappings ──
@@ -45,6 +54,16 @@ const textFieldMappings: TextFieldMapping[] = [
   {
     field: 't4',
     source: { type: 'computed', fn: (c) => c.applicationType === '체류자격부여' ? c.visaType : '' },
+  },
+
+  // 체류자격 외 활동허가 희망 자격
+  {
+    field: 't5',
+    source: { type: 'static', value: '' },
+  },
+  {
+    field: 't6',
+    source: { type: 'static', value: '' },
   },
 
   // Name (passport → alien_registration fallback)
@@ -124,6 +143,10 @@ const textFieldMappings: TextFieldMapping[] = [
   { field: 't32', source: { type: 'static', value: '' } },
   { field: 't33', source: { type: 'static', value: '' } },
 
+  // School
+  { field: 't34', source: { type: 'static', value: '' } },
+  { field: 't35', source: { type: 'static', value: '' } },
+
   // Workplace - current
   {
     field: 't36',
@@ -133,6 +156,8 @@ const textFieldMappings: TextFieldMapping[] = [
     field: 't37',
     source: { type: 'ocr', docType: 'business_reg', key: '사업자등록번호' },
   },
+  // Current workplace phone
+  { field: 't38', source: { type: 'static', value: '' } },
 
   // Workplace - new (for 근무처변경 cases, use same company)
   {
@@ -148,6 +173,9 @@ const textFieldMappings: TextFieldMapping[] = [
     },
   },
 
+  // New workplace phone
+  { field: 't41', source: { type: 'static', value: '' } },
+
   // Annual income
   {
     field: 't42',
@@ -161,6 +189,9 @@ const textFieldMappings: TextFieldMapping[] = [
       ocrFallback(c, ['employment_contract', '근무내용'], ['employment_contract', '직위'])
     },
   },
+
+  // Intended period of reentry
+  { field: 't44', source: { type: 'static', value: '' } },
 
   // Email
   {
@@ -191,6 +222,8 @@ const fieldLabels: Record<string, string> = {
   t2: '변경 희망자격 (영문)',
   t3: '부여 희망자격 (코드)',
   t4: '부여 희망자격 (영문)',
+  t5: '체류자격 외 활동허가 희망자격 (코드)',
+  t6: '체류자격 외 활동허가 희망자격 (영문)',
   t7: '성 (Surname)',
   t8: '이름 (Given names)',
   t9: '생년 (yyyy)',
@@ -205,12 +238,17 @@ const fieldLabels: Record<string, string> = {
   t31: '휴대전화',
   t32: '본국 주소',
   t33: '본국 전화번호',
+  t34: '학교 이름',
+  t35: '학교 전화번호',
   t36: '원 근무처',
   t37: '사업자등록번호 (현)',
+  t38: '원 근무처 전화번호',
   t39: '예정 근무처',
   t40: '사업자등록번호 (신)',
+  t41: '예정 근무처 전화번호',
   t42: '연 소득금액',
   t43: '직업',
+  t44: '재입국 신청 기간',
   t45: '이메일',
   t46: '반환용 계좌번호',
   t47: '신청일',
@@ -234,6 +272,13 @@ const checkboxLabels: Record<string, string> = {
   c10: '등록사항변경신고',
   c11: '남 (M)',
   c12: '여 (F)',
+  c13: '미취학',
+  c14: '초등학교',
+  c15: '중학교',
+  c16: '고등학교',
+  c17: '교육청 인가',
+  c18: '교육청 비인가',
+  c19: '대안학교',
 };
 
 // ── FormDefinition ──
