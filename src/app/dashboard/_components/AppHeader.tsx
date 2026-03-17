@@ -1,16 +1,52 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
+import { onSessionRefresh } from '@/lib/api';
 
-const INITIAL_SESSION_SECONDS = 30 * 60; // 30분
+const ACCESS_TOKEN_LIFETIME_SECONDS = 15 * 60; // 15분
+const PROACTIVE_REFRESH_SECONDS = 60; // 만료 1분 전에 선제 갱신
 
 export default function AppHeader() {
   const router = useRouter();
   const logout = useAuthStore((s) => s.logout);
-  const [remaining, setRemaining] = useState(INITIAL_SESSION_SECONDS);
+  const [remaining, setRemaining] = useState(ACCESS_TOKEN_LIFETIME_SECONDS);
+
+  const resetTimer = useCallback((remainingMs: number) => {
+    setRemaining(Math.floor(remainingMs / 1000));
+  }, []);
+
+  // 세션 갱신 이벤트 구독 → 타이머 리셋
+  useEffect(() => {
+    return onSessionRefresh(resetTimer);
+  }, [resetTimer]);
+
+  // 만료 1분 전 선제적 토큰 갱신
+  useEffect(() => {
+    if (remaining !== PROACTIVE_REFRESH_SECONDS) return;
+
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        if (res.ok) {
+          setRemaining(ACCESS_TOKEN_LIFETIME_SECONDS);
+        } else {
+          // refresh 실패 → 로그아웃
+          await logout();
+          router.push('/login');
+        }
+      } catch {
+        await logout();
+        router.push('/login');
+      }
+    })();
+  }, [remaining, logout, router]);
 
   useEffect(() => {
     const timer = setInterval(() => {

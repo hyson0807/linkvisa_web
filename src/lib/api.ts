@@ -10,6 +10,51 @@ export class ApiError extends Error {
   }
 }
 
+/* ── 세션 타이머 연동 ── */
+type SessionListener = (remainingMs: number) => void;
+const sessionListeners = new Set<SessionListener>();
+
+/** AppHeader 등에서 세션 갱신 이벤트를 구독 */
+export function onSessionRefresh(listener: SessionListener) {
+  sessionListeners.add(listener);
+  return () => { sessionListeners.delete(listener); };
+}
+
+function notifySessionRefresh(remainingMs: number) {
+  sessionListeners.forEach((fn) => fn(remainingMs));
+}
+
+/* ── 토큰 갱신 ── */
+const ACCESS_TOKEN_LIFETIME_MS = 15 * 60 * 1000; // 15분
+let refreshPromise: Promise<boolean> | null = null;
+
+async function refreshAccessToken(): Promise<boolean> {
+  // 동시 다발적 401에 대해 refresh 요청을 한 번만 보냄
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      if (res.ok) {
+        notifySessionRefresh(ACCESS_TOKEN_LIFETIME_MS);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+/* ── API 호출 ── */
 export async function api<T = unknown>(
   path: string,
   options: RequestInit = {},
@@ -26,14 +71,24 @@ export async function api<T = unknown>(
     headers["X-Session-Token"] = getSessionToken();
   }
 
-  const res = await fetch(path, {
+  const mergedOptions: RequestInit = {
     ...options,
     credentials: "include",
     headers: {
       ...headers,
       ...options.headers,
     },
-  });
+  };
+
+  let res = await fetch(path, mergedOptions);
+
+  // 401이면 토큰 갱신 후 한 번 재시도 (refresh 엔드포인트 자체는 제외)
+  if (res.status === 401 && !path.includes('/auth/refresh') && !path.includes('/auth/login')) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      res = await fetch(path, mergedOptions);
+    }
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
