@@ -82,8 +82,11 @@ export async function api<T = unknown>(
 
   let res = await fetch(path, mergedOptions);
 
-  // 401이면 토큰 갱신 후 한 번 재시도 (refresh 엔드포인트 자체는 제외)
-  if (res.status === 401 && path !== '/api/auth/refresh' && path !== '/api/auth/login') {
+  // 401/403이면 토큰 갱신 후 한 번 재시도
+  // - 401: JwtAccessGuard가 토큰 만료 시 직접 반환
+  // - 403: OptionalJwtAccessGuard가 토큰 만료 시 user=null로 통과시켜 assertAccess에서 발생
+  const isAuthPath = path === '/api/auth/refresh' || path === '/api/auth/login';
+  if ((res.status === 401 || res.status === 403) && !isAuthPath) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
       res = await fetch(path, mergedOptions);
