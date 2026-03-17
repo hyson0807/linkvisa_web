@@ -19,8 +19,14 @@ interface FieldGroup {
   cols?: string;
 }
 
+// applicationType → 신청 자격 필드 매핑
+const APP_TYPE_QUAL_FIELDS: Record<string, string[]> = {
+  '체류자격변경허가': ['t1', 't2'],
+  '체류자격부여': ['t3', 't4'],
+  '체류자격 외 활동허가': ['t5', 't6'],
+};
+
 const UNIFIED_FIELD_GROUPS: FieldGroup[] = [
-  { label: '신청 자격', fields: ['t1', 't2', 't3', 't4', 't5', 't6'], cols: '1fr 1fr' },
   { label: '성명', fields: ['t7', 't8'], cols: '1fr 1fr' },
   { label: '생년월일 · 성별', fields: ['t9', 't10', 't11'], cols: '1fr 1fr 1fr' },
   { label: '외국인등록번호', fields: ALIEN_REG_FIELDS },
@@ -35,8 +41,11 @@ const UNIFIED_FIELD_GROUPS: FieldGroup[] = [
   { label: '기타', fields: ['t44', 't45', 't46', 't47'], cols: '1fr 1fr' },
 ];
 
-// All grouped field ids (flat set)
-const GROUPED_FIELDS = new Set(UNIFIED_FIELD_GROUPS.flatMap((g) => g.fields));
+// All grouped field ids (flat set) – includes all 신청 자격 fields (t1-t6) even though they're conditionally shown
+const GROUPED_FIELDS = new Set([
+  ...UNIFIED_FIELD_GROUPS.flatMap((g) => g.fields),
+  't1', 't2', 't3', 't4', 't5', 't6',
+]);
 
 // ── Types ──
 
@@ -156,7 +165,11 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
                 (() => {
                   const fieldMap = buildFieldMap(analysis);
                   const isUnified = formDef.id === 'unified_application';
-                  const groups = isUnified ? UNIFIED_FIELD_GROUPS : [];
+                  const qualFields = APP_TYPE_QUAL_FIELDS[caseData.applicationType ?? ''];
+                  const qualGroup: FieldGroup[] = qualFields
+                    ? [{ label: '신청 자격', fields: qualFields, cols: '1fr 1fr' }]
+                    : [];
+                  const groups = isUnified ? [...qualGroup, ...UNIFIED_FIELD_GROUPS] : [];
 
                   // Fields not in any group
                   const ungroupedFields = [...fieldMap.entries()]
