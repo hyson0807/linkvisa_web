@@ -34,7 +34,7 @@ export default function OutputStep({ caseData, onPrev }: OutputStepProps) {
     fillFormPdf(previewForm, caseData)
       .then((pdfBytes) => {
         if (revoked) return;
-        const blob = new Blob([pdfBytes as unknown as Uint8Array<ArrayBuffer>], { type: 'application/pdf' });
+        const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
         setPreviewUrl(url);
       })

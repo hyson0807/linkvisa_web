@@ -84,7 +84,7 @@ export async function fillFormPdf(formDef: FormDefinition, caseData: Case): Prom
 export async function fillAndDownloadForm(formDef: FormDefinition, caseData: Case): Promise<void> {
   const pdfBytes = await fillFormPdf(formDef, caseData);
 
-  const blob = new Blob([pdfBytes as unknown as Uint8Array<ArrayBuffer>], { type: 'application/pdf' });
+  const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
 
   const a = document.createElement('a');

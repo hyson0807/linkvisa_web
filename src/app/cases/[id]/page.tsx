@@ -8,10 +8,9 @@ import UploadStep from './_components/step1-upload/UploadStep';
 import FormConfirmStep from './_components/step2-form-confirm/FormConfirmStep';
 import ReviewStep from './_components/step3-ocr/ReviewStep';
 import MappingStep from './_components/step4-mapping/MappingStep';
-import OutputStep from './_components/step4-output/OutputStep';
+import OutputStep from './_components/step5-output/OutputStep';
 import StudentLinkPanel from './_components/StudentLinkPanel';
 import { useCaseStore } from '@/store/case-store';
-import { visaTypes } from '@/lib/document-registry';
 
 export default function CaseWorkspacePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -45,8 +44,6 @@ export default function CaseWorkspacePage({ params }: { params: Promise<{ id: st
       </div>
     );
   }
-
-  const visaLabel = visaTypes.find((v) => v.code === caseData.visaType);
 
   return (
     <div className="min-h-screen bg-[#fafafa]">
