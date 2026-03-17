@@ -416,10 +416,7 @@ export const textFieldMappings: TextFieldMapping[] = [
   // Address in Korea
   {
     field: 't29',
-    source: { type: 'computed', fn: (c) => {
-      // Try business_reg address as workplace address, or manual field
-      return getOcrValue(c, 'business_reg', '사업장소재지');
-    }},
+    source: { type: 'static', value: '' },
   },
 
   // Phone numbers
