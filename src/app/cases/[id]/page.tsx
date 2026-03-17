@@ -50,7 +50,7 @@ export default function CaseWorkspacePage({ params }: { params: Promise<{ id: st
   return (
     <div className="min-h-screen bg-[#fafafa]">
       <CasesAppHeader />
-      <main className="mx-auto max-w-4xl px-6 py-4">
+      <main className="mx-auto max-w-5xl px-6 py-4">
         {/* Unified header: case info + step indicator */}
         <div className="mb-4 flex h-12 items-center justify-between">
           {/* Left: Case info */}

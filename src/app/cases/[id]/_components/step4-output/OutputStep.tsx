@@ -79,6 +79,7 @@ export default function OutputStep({ caseData, onPrev }: OutputStepProps) {
         onClose={() => setInspectDoc(null)}
         docType={inspectDoc?.docType ?? null}
         caseDoc={inspectDoc?.caseDoc ?? null}
+        caseData={caseData}
       />
     </div>
   );
