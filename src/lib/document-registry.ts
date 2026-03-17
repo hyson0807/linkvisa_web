@@ -10,7 +10,7 @@ export const documentRegistry: DocumentTypeDef[] = [
     category: 'foreigner',
     source: 'upload',
     step: 'ocr',
-    ocrFields: ['성명(영문)', '성별', '생년월일', '국적', '여권번호', '여권만료일'],
+    ocrFields: ['성명(영문)', '성별', '생년월일', '국적', '여권번호', '여권발급일', '여권만료일'],
     requiredForVisas: ALL_VISAS,
   },
   {

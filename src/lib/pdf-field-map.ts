@@ -386,7 +386,7 @@ export const textFieldMappings: TextFieldMapping[] = [
   },
   {
     field: 't27',
-    source: { type: 'computed', fn: () => '' }, // 여권발급일자 - not in OCR fields currently
+    source: { type: 'ocr', docType: 'passport', key: '여권발급일' },
   },
   {
     field: 't28',
