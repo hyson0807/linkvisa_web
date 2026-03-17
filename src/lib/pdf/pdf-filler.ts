@@ -48,7 +48,8 @@ export async function fillFormPdf(formDef: FormDefinition, caseData: Case): Prom
   // Fill text fields
   for (const mapping of formDef.textFieldMappings) {
     try {
-      const rawValue = resolveSource(caseData, mapping.source);
+      const manualOverride = caseData.manualFields?.[mapping.field];
+      const rawValue = manualOverride || resolveSource(caseData, mapping.source);
       const value = applyTransform(rawValue, mapping.transform, mapping.digitIndex);
       if (!value) continue;
 

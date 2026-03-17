@@ -8,7 +8,6 @@ import { runMockOcr } from '@/lib/mock-ocr';
 import { runMockAiGenerate } from '@/lib/mock-ai-generate';
 import { hasFiles } from '@/types/case';
 import type { Case } from '@/types/case';
-import PdfMappingPanel from './PdfMappingPanel';
 
 interface ReviewStepProps {
   caseData: Case;
@@ -118,51 +117,43 @@ export default function ReviewStep({ caseData, onNext, onPrev }: ReviewStepProps
         </div>
       )}
 
-      {/* Done state: 2-column layout */}
+      {/* Done state */}
       {status === 'done' && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-          {/* Left: OCR results (3/5) */}
-          <div className="lg:col-span-3">
-            {ocrResultDocs.length > 0 ? (
-              <div className="rounded-xl border border-black/5 bg-white p-4 shadow-sm">
-                <p className="text-sm font-semibold text-black/70 mb-3">추출 결과</p>
-                <div className="space-y-3">
-                  {ocrResultDocs.map((d) => (
-                    <div key={d.caseDoc.id} className="rounded-lg bg-black/[0.02] p-3">
-                      <p className="mb-2 text-xs font-semibold text-black/60">
-                        {d.docType.label}
-                      </p>
-                      <table className="w-full text-xs">
-                        <tbody>
-                          {Object.entries(d.caseDoc.ocrResult!).map(([key, value]) => (
-                            <tr key={key} className="border-b border-black/5 last:border-0">
-                              <td className="py-1 pr-3 font-medium text-black/50 whitespace-nowrap">
-                                {key}
-                              </td>
-                              <td className="py-1 text-black/70">
-                                {typeof value === 'string'
-                                  ? value || '—'
-                                  : JSON.stringify(value)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ))}
-                </div>
+        <div>
+          {ocrResultDocs.length > 0 ? (
+            <div className="rounded-xl border border-black/5 bg-white p-4 shadow-sm">
+              <p className="text-sm font-semibold text-black/70 mb-3">추출 결과</p>
+              <div className="space-y-3">
+                {ocrResultDocs.map((d) => (
+                  <div key={d.caseDoc.id} className="rounded-lg bg-black/[0.02] p-3">
+                    <p className="mb-2 text-xs font-semibold text-black/60">
+                      {d.docType.label}
+                    </p>
+                    <table className="w-full text-xs">
+                      <tbody>
+                        {Object.entries(d.caseDoc.ocrResult!).map(([key, value]) => (
+                          <tr key={key} className="border-b border-black/5 last:border-0">
+                            <td className="py-1 pr-3 font-medium text-black/50 whitespace-nowrap">
+                              {key}
+                            </td>
+                            <td className="py-1 text-black/70">
+                              {typeof value === 'string'
+                                ? value || '—'
+                                : JSON.stringify(value)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <div className="rounded-xl border border-black/5 bg-white p-10 text-center shadow-sm">
-                <p className="text-sm text-black/40">추출된 데이터가 없습니다.</p>
-              </div>
-            )}
-          </div>
-
-          {/* Right: PDF mapping panel (2/5) */}
-          <div className="lg:col-span-2">
-            <PdfMappingPanel caseData={caseData} />
-          </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-black/5 bg-white p-10 text-center shadow-sm">
+              <p className="text-sm text-black/40">추출된 데이터가 없습니다.</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -182,7 +173,7 @@ export default function ReviewStep({ caseData, onNext, onPrev }: ReviewStepProps
             onClick={onNext}
             className="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-primary/90"
           >
-            다음 단계로 →
+            매핑 확인 →
           </button>
         )}
       </div>

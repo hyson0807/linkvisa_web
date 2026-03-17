@@ -1,11 +1,12 @@
 'use client';
 
-export type WizardStep = 'upload' | 'form-confirm' | 'review' | 'output';
+export type WizardStep = 'upload' | 'form-confirm' | 'review' | 'mapping' | 'output';
 
 const publicSteps: { key: WizardStep; label: string }[] = [
   { key: 'upload', label: '서류업로드' },
   { key: 'form-confirm', label: '양식확인' },
   { key: 'review', label: '데이터추출' },
+  { key: 'mapping', label: '매핑확인' },
   { key: 'output', label: '공문서' },
 ];
 
