@@ -17,6 +17,10 @@ export interface FormDefinition {
   templatePath: string;
   textFieldMappings: TextFieldMapping[];
   checkboxMappings: CheckboxMapping[];
+  /** Optional fallback page index for fields when widget/page links are missing in the template */
+  fieldPageHints?: Record<string, number>;
+  /** Require flatten to succeed before returning the generated PDF */
+  mustFlatten?: boolean;
   fieldLabels: Record<string, string>;
   checkboxLabels: Record<string, string>;
   applicableVisas: string[];

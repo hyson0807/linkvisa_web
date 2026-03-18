@@ -291,6 +291,11 @@ export const unifiedApplicationForm: FormDefinition = {
   templatePath: '/forms/application_form.pdf',
   textFieldMappings,
   checkboxMappings,
+  fieldPageHints: Object.fromEntries([
+    ...textFieldMappings.map(({ field }) => [field, 0] as const),
+    ...checkboxMappings.map(({ field }) => [field, 0] as const),
+  ]),
+  mustFlatten: true,
   fieldLabels,
   checkboxLabels,
   applicableVisas: ALL_VISAS,

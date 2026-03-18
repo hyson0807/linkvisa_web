@@ -191,6 +191,47 @@ function canFlattenForm(
   return true;
 }
 
+function repairWidgetPageRefs(
+  pdfDoc: PDFDocument,
+  formDef: FormDefinition,
+  form: {
+    getFields(): {
+      getName(): string;
+      acroField: {
+        getWidgets(): {
+          P(): unknown;
+          dict: { set(name: PDFName, value: unknown): void };
+        }[];
+      };
+    }[];
+  },
+): void {
+  const pages = pdfDoc.getPages();
+  const singlePageFallback = pages.length === 1 ? pages[0] : undefined;
+
+  for (const field of form.getFields()) {
+    const hintedPageIndex = formDef.fieldPageHints?.[field.getName()];
+    const hintedPage = hintedPageIndex !== undefined ? pages[hintedPageIndex] : singlePageFallback;
+
+    for (const widget of field.acroField.getWidgets()) {
+      const pageRef = widget.P();
+      if (pageRef && pages.some((page) => page.ref === pageRef)) continue;
+
+      const widgetRef = pdfDoc.context.getObjectRef(widget.dict);
+      const resolvedPage = widgetRef ? pdfDoc.findPageForAnnotationRef(widgetRef) : undefined;
+      const targetPage = resolvedPage ?? hintedPage;
+
+      if (targetPage) {
+        widget.dict.set(PDFName.of('P'), targetPage.ref);
+      }
+    }
+  }
+}
+
+function getRemainingFieldCount(form: { getFields(): unknown[] }): number {
+  return form.getFields().length;
+}
+
 function calcFitFontSize(
   text: string,
   font: PDFFont,
@@ -283,8 +324,22 @@ export async function fillFormPdf(formDef: FormDefinition, caseData: Case): Prom
 
   form.acroForm.dict.set(PDFName.of('NeedAppearances'), PDFBool.False);
 
-  if (canFlattenForm(pdfDoc, form)) {
+  repairWidgetPageRefs(pdfDoc, formDef, form);
+
+  const canFlatten = canFlattenForm(pdfDoc, form);
+
+  if (canFlatten) {
     form.flatten();
+  }
+
+  if (formDef.mustFlatten) {
+    if (!canFlatten) {
+      throw new Error(`Flatten required but widget/page mapping is incomplete for ${formDef.id}`);
+    }
+
+    if (getRemainingFieldCount(form) > 0) {
+      throw new Error(`Flatten required but form fields remain for ${formDef.id}`);
+    }
   }
 
   return pdfDoc.save();
