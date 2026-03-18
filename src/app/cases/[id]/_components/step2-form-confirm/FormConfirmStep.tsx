@@ -1,6 +1,8 @@
 'use client';
 
 import { getDocumentsForVisa } from '@/lib/document-registry';
+import '@/lib/pdf/forms';
+import { getForm } from '@/lib/pdf/form-registry';
 import type { Case } from '@/types/case';
 
 interface FormConfirmStepProps {
@@ -39,7 +41,7 @@ const SOURCE_BADGE: Record<string, { label: string; className: string }> = {
 export default function FormConfirmStep({ caseData, onNext, onPrev }: FormConfirmStepProps) {
   const allDocs = getDocumentsForVisa(caseData.visaType);
   const formDocs = allDocs.filter(
-    (d) => d.source === 'form-generate' || d.source === 'ai-generate',
+    (d) => (d.source === 'form-generate' || d.source === 'ai-generate') && getForm(d.id),
   );
 
   return (

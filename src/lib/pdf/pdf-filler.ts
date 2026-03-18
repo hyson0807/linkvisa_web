@@ -1,4 +1,4 @@
-import { PDFBool, PDFDocument, PDFFont, PDFName } from 'pdf-lib';
+import { PDFArray, PDFBool, PDFDict, PDFDocument, PDFFont, PDFName, PDFRef } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { Case } from '@/types/case';
 import type { FormDefinition } from './form-registry';
@@ -233,6 +233,41 @@ function getRemainingFieldCount(form: { getFields(): unknown[] }): number {
   return form.getFields().length;
 }
 
+/**
+ * Remove orphaned Widget annotations that are not registered in the AcroForm field tree.
+ * Some PDF templates contain Widget annotations directly in page Annots arrays
+ * that pdf-lib's form.flatten() does not remove.
+ */
+function removeOrphanedWidgets(pdfDoc: PDFDocument): void {
+  for (const page of pdfDoc.getPages()) {
+    const annots = page.node.Annots();
+    if (!annots) continue;
+
+    for (let i = annots.size() - 1; i >= 0; i--) {
+      const annotRef = annots.get(i);
+      const annotDict =
+        annotRef instanceof PDFRef
+          ? pdfDoc.context.lookup(annotRef)
+          : annotRef;
+      if (!(annotDict instanceof PDFDict)) continue;
+
+      const subtype = annotDict.get(PDFName.of('Subtype'));
+      if (subtype === PDFName.of('Widget')) {
+        annots.remove(i);
+      }
+    }
+
+    if (annots.size() === 0) {
+      page.node.delete(PDFName.of('Annots'));
+    }
+  }
+}
+
+/** Remove the AcroForm dictionary from the catalog to prevent viewers from showing form UI. */
+function removeAcroForm(pdfDoc: PDFDocument): void {
+  pdfDoc.catalog.delete(PDFName.of('AcroForm'));
+}
+
 function calcFitFontSize(
   text: string,
   font: PDFFont,
@@ -333,6 +368,11 @@ export async function fillFormPdf(formDef: FormDefinition, caseData: Case): Prom
 
   if (canFlatten) {
     form.flatten();
+  }
+
+  if (canFlatten) {
+    removeOrphanedWidgets(pdfDoc);
+    removeAcroForm(pdfDoc);
   }
 
   if (formDef.mustFlatten) {
