@@ -1,38 +1,17 @@
 import type { Case } from '@/types/case';
 import type { FormDefinition, FieldGroup } from '../form-registry';
 import type { TextFieldMapping, CheckboxMapping } from '../field-utils';
-import { ocrFallback } from '../field-utils';
-
-// ── Helpers ──
-
-function getSex(c: Case): string {
-  return ocrFallback(c, ['passport', '성별'], ['alien_registration', '성별']).toUpperCase();
-}
+import { nameSplit, dobField, nationality, sexCheckboxes, passportNumber, currentDateSplit } from '../field-presets';
 
 // ── Text field mappings (24) ──
 
 const textFieldMappings: TextFieldMapping[] = [
   // 피보증 외국인
-  {
-    field: 't1',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '성명(영문)'], ['alien_registration', '성명']) },
-    transform: 'split-surname',
-  },
-  {
-    field: 't2',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '성명(영문)'], ['alien_registration', '성명']) },
-    transform: 'split-given',
-  },
+  ...nameSplit('t1', 't2'),
   { field: 't3', source: { type: 'static', value: '' } },
-  {
-    field: 't4',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '생년월일'], ['alien_registration', '생년월일']) },
-  },
-  {
-    field: 't5',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '국적'], ['alien_registration', '국적']) },
-  },
-  { field: 't6', source: { type: 'ocr', docType: 'passport', key: '여권번호' } },
+  dobField('t4'),
+  nationality('t5'),
+  passportNumber('t6'),
   { field: 't7', source: { type: 'static', value: '' } },
   { field: 't8', source: { type: 'manual', fieldId: 'applicant_phone_kr' } },
   { field: 't9', source: { type: 'case', key: 'visaType' } },
@@ -51,26 +30,14 @@ const textFieldMappings: TextFieldMapping[] = [
   { field: 't20', source: { type: 'static', value: '' } },
 
   // 날짜/서명
-  {
-    field: 't21',
-    source: { type: 'computed', fn: () => String(new Date().getFullYear()) },
-  },
-  {
-    field: 't22',
-    source: { type: 'computed', fn: () => String(new Date().getMonth() + 1).padStart(2, '0') },
-  },
-  {
-    field: 't23',
-    source: { type: 'computed', fn: () => String(new Date().getDate()).padStart(2, '0') },
-  },
+  ...currentDateSplit('t21', 't22', 't23'),
   { field: 't24', source: { type: 'manual', fieldId: 'guarantor_name' } },
 ];
 
 // ── Checkbox mappings (4) ──
 
 const checkboxMappings: CheckboxMapping[] = [
-  { field: 'c1', condition: (c) => { const v = c.manualFields?.sex || getSex(c); return v === '남' || v === 'M'; } },
-  { field: 'c2', condition: (c) => { const v = c.manualFields?.sex || getSex(c); return v === '여' || v === 'F'; } },
+  ...sexCheckboxes('c1', 'c2'),
   { field: 'c3', condition: (c) => c.manualFields?.guarantor_sex === '남' },
   { field: 'c4', condition: (c) => c.manualFields?.guarantor_sex === '여' },
 ];

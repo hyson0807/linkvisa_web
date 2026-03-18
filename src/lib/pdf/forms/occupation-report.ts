@@ -2,6 +2,7 @@ import type { Case } from '@/types/case';
 import type { FormDefinition, FieldGroup } from '../form-registry';
 import type { TextFieldMapping, CheckboxMapping } from '../field-utils';
 import { ocrFallback } from '../field-utils';
+import { nameSplit, dobSplit, nationality, sexCheckboxes, alienRegDigits, currentDateSplit } from '../field-presets';
 
 // ── 52 occupation categories (c3-c54) ──
 
@@ -27,44 +28,13 @@ const OCCUPATION_CATEGORIES = [
 
 const textFieldMappings: TextFieldMapping[] = [
   // 인적사항
-  {
-    field: 't1',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '성명(영문)'], ['alien_registration', '성명']) },
-    transform: 'split-surname',
-  },
-  {
-    field: 't2',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '성명(영문)'], ['alien_registration', '성명']) },
-    transform: 'split-given',
-  },
+  ...nameSplit('t1', 't2'),
   { field: 't3', source: { type: 'static', value: '' } },
-  {
-    field: 't4',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '생년월일'], ['alien_registration', '생년월일']) },
-    transform: 'date-yyyy',
-  },
-  {
-    field: 't5',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '생년월일'], ['alien_registration', '생년월일']) },
-    transform: 'date-mm',
-  },
-  {
-    field: 't6',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '생년월일'], ['alien_registration', '생년월일']) },
-    transform: 'date-dd',
-  },
-  {
-    field: 't20',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '국적'], ['alien_registration', '국적']) },
-  },
+  ...dobSplit('t4', 't5', 't6'),
+  nationality('t20'),
 
   // 외국인등록번호 13자리 (t7-t19)
-  ...Array.from({ length: 13 }, (_, i) => ({
-    field: `t${7 + i}`,
-    source: { type: 'ocr' as const, docType: 'alien_registration', key: '외국인등록번호' },
-    transform: 'alien-reg-digit' as const,
-    digitIndex: i,
-  })),
+  ...alienRegDigits((i) => `t${7 + i}`),
 
   // 직업명
   {
@@ -73,18 +43,7 @@ const textFieldMappings: TextFieldMapping[] = [
   },
 
   // 신청일/서명
-  {
-    field: 't22',
-    source: { type: 'computed', fn: () => String(new Date().getFullYear()) },
-  },
-  {
-    field: 't23',
-    source: { type: 'computed', fn: () => String(new Date().getMonth() + 1).padStart(2, '0') },
-  },
-  {
-    field: 't24',
-    source: { type: 'computed', fn: () => String(new Date().getDate()).padStart(2, '0') },
-  },
+  ...currentDateSplit('t22', 't23', 't24'),
   {
     field: 't25',
     source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '성명(영문)'], ['alien_registration', '성명']) },
@@ -94,10 +53,6 @@ const textFieldMappings: TextFieldMapping[] = [
 
 // ── Checkbox mappings (54) ──
 
-function getSex(c: Case): string {
-  return ocrFallback(c, ['passport', '성별'], ['alien_registration', '성별']).toUpperCase();
-}
-
 const checkboxMappings: CheckboxMapping[] = [
   // c1-c52: 직업분류 52개
   ...OCCUPATION_CATEGORIES.map((cat, i) => ({
@@ -105,8 +60,7 @@ const checkboxMappings: CheckboxMapping[] = [
     condition: (c: Case) => c.manualFields?.occupation_category === cat,
   })),
   // c53=남, c54=여
-  { field: 'c53', condition: (c) => { const v = c.manualFields?.sex || getSex(c); return v === '남' || v === 'M'; } },
-  { field: 'c54', condition: (c) => { const v = c.manualFields?.sex || getSex(c); return v === '여' || v === 'F'; } },
+  ...sexCheckboxes('c53', 'c54'),
 ];
 
 // ── Labels ──

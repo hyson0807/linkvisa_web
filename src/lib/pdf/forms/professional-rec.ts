@@ -2,28 +2,17 @@ import type { Case } from '@/types/case';
 import type { FormDefinition, FieldGroup } from '../form-registry';
 import type { TextFieldMapping, CheckboxMapping } from '../field-utils';
 import { ocrFallback, getOcrValue } from '../field-utils';
+import { nationality, nameField, dobField, sexField, passportNumber, currentDateSplit } from '../field-presets';
 
 // ── Text field mappings (22) ──
 
 const textFieldMappings: TextFieldMapping[] = [
   // 외국인력 정보
-  {
-    field: 't1',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '국적'], ['alien_registration', '국적']) },
-  },
-  {
-    field: 't2',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '성명(영문)'], ['alien_registration', '성명']) },
-  },
-  {
-    field: 't3',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '생년월일'], ['alien_registration', '생년월일']) },
-  },
-  {
-    field: 't4',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '성별'], ['alien_registration', '성별']) },
-  },
-  { field: 't5', source: { type: 'ocr', docType: 'passport', key: '여권번호' } },
+  nationality('t1'),
+  nameField('t2'),
+  dobField('t3'),
+  sexField('t4'),
+  passportNumber('t5'),
   { field: 't6', source: { type: 'static', value: '' } },
   {
     field: 't7',
@@ -60,18 +49,7 @@ const textFieldMappings: TextFieldMapping[] = [
   { field: 't18', source: { type: 'static', value: '' } },
 
   // 날짜/추천자
-  {
-    field: 't19',
-    source: { type: 'computed', fn: () => String(new Date().getFullYear()) },
-  },
-  {
-    field: 't20',
-    source: { type: 'computed', fn: () => String(new Date().getMonth() + 1).padStart(2, '0') },
-  },
-  {
-    field: 't21',
-    source: { type: 'computed', fn: () => String(new Date().getDate()).padStart(2, '0') },
-  },
+  ...currentDateSplit('t19', 't20', 't21'),
   { field: 't22', source: { type: 'static', value: '' } },
 ];
 

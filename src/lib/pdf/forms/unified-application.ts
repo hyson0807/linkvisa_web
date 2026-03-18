@@ -2,12 +2,7 @@ import type { Case } from '@/types/case';
 import type { FormDefinition } from '../form-registry';
 import type { TextFieldMapping, CheckboxMapping } from '../field-utils';
 import { ocrFallback, getOcrValue } from '../field-utils';
-
-// ── Helpers ──
-
-function getSex(c: Case): string {
-  return ocrFallback(c, ['passport', '성별'], ['alien_registration', '성별']).toUpperCase();
-}
+import { nameSplit, dobSplit, nationality, sexCheckboxes, alienRegDigits, passportNumber, passportIssueDate, passportExpiryDate, currentDateField } from '../field-presets';
 
 // ── Checkbox mappings ──
 
@@ -22,8 +17,7 @@ const checkboxMappings: CheckboxMapping[] = [
   { field: 'c8', condition: () => false },
   { field: 'c9', condition: (c) => c.applicationType === '체류지변경신고' },
   { field: 'c10', condition: (c) => c.applicationType === '등록사항변경신고' },
-  { field: 'c11', condition: (c) => { const v = c.manualFields?.sex || getSex(c); return v === '남' || v === 'M'; } },
-  { field: 'c12', condition: (c) => { const v = c.manualFields?.sex || getSex(c); return v === '여' || v === 'F'; } },
+  ...sexCheckboxes('c11', 'c12'),
   // School status (재학 여부)
   { field: 'c13', condition: (c) => c.manualFields?.school_status === '미취학' },
   { field: 'c14', condition: (c) => c.manualFields?.school_status === '초' },
@@ -67,61 +61,21 @@ const textFieldMappings: TextFieldMapping[] = [
   },
 
   // Name (passport → alien_registration fallback)
-  {
-    field: 't7',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '성명(영문)'], ['alien_registration', '성명']) },
-    transform: 'split-surname',
-  },
-  {
-    field: 't8',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '성명(영문)'], ['alien_registration', '성명']) },
-    transform: 'split-given',
-  },
+  ...nameSplit('t7', 't8'),
 
   // Date of birth (passport → alien_registration fallback)
-  {
-    field: 't9',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '생년월일'], ['alien_registration', '생년월일']) },
-    transform: 'date-yyyy',
-  },
-  {
-    field: 't10',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '생년월일'], ['alien_registration', '생년월일']) },
-    transform: 'date-mm',
-  },
-  {
-    field: 't11',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '생년월일'], ['alien_registration', '생년월일']) },
-    transform: 'date-dd',
-  },
+  ...dobSplit('t9', 't10', 't11'),
 
   // Foreign Resident Registration No. (t12-t24, 13 digits)
-  ...Array.from({ length: 13 }, (_, i) => ({
-    field: `t${12 + i}`,
-    source: { type: 'ocr' as const, docType: 'alien_registration', key: '외국인등록번호' },
-    transform: 'alien-reg-digit' as const,
-    digitIndex: i,
-  })),
+  ...alienRegDigits((i) => `t${12 + i}`),
 
   // Nationality (passport → alien_registration fallback)
-  {
-    field: 't25',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '국적'], ['alien_registration', '국적']) },
-  },
+  nationality('t25'),
 
   // Passport
-  {
-    field: 't26',
-    source: { type: 'ocr', docType: 'passport', key: '여권번호' },
-  },
-  {
-    field: 't27',
-    source: { type: 'ocr', docType: 'passport', key: '여권발급일' },
-  },
-  {
-    field: 't28',
-    source: { type: 'ocr', docType: 'passport', key: '여권만료일' },
-  },
+  passportNumber('t26'),
+  passportIssueDate('t27'),
+  passportExpiryDate('t28'),
 
   // Address in Korea
   {
@@ -206,13 +160,7 @@ const textFieldMappings: TextFieldMapping[] = [
   },
 
   // Date of application (today)
-  {
-    field: 't47',
-    source: { type: 'computed', fn: () => {
-      const d = new Date();
-      return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
-    }},
-  },
+  currentDateField('t47'),
 ];
 
 // ── Field labels ──

@@ -2,6 +2,7 @@ import type { Case } from '@/types/case';
 import type { FormDefinition, FieldGroup } from '../form-registry';
 import type { TextFieldMapping, CheckboxMapping } from '../field-utils';
 import { ocrFallback } from '../field-utils';
+import { nameField, sexField, nationality, dobField, passportNumber } from '../field-presets';
 
 const checkboxMappings: CheckboxMapping[] = [];
 
@@ -20,23 +21,11 @@ const textFieldMappings: TextFieldMapping[] = [
   { field: 't11', source: { type: 'manual', fieldId: 'company_description' } },
 
   // ── Section 2: 전문외국인력 이력개요 (t12~t36) ──
-  {
-    field: 't12',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '성명(영문)'], ['alien_registration', '성명']) },
-  },
-  {
-    field: 't13',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '성별'], ['alien_registration', '성별']) },
-  },
-  {
-    field: 't14',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '국적'], ['alien_registration', '국적']) },
-  },
-  {
-    field: 't15',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '생년월일'], ['alien_registration', '생년월일']) },
-  },
-  { field: 't16', source: { type: 'ocr', docType: 'passport', key: '여권번호' } },
+  nameField('t12'),
+  sexField('t13'),
+  nationality('t14'),
+  dobField('t15'),
+  passportNumber('t16'),
   { field: 't17', source: { type: 'static', value: '' } },
   { field: 't18', source: { type: 'manual', fieldId: 'applicant_phone_kr' } },
   {

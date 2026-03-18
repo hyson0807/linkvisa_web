@@ -1,21 +1,16 @@
 import type { Case } from '@/types/case';
 import type { FormDefinition, FieldGroup } from '../form-registry';
 import type { TextFieldMapping, CheckboxMapping } from '../field-utils';
-import { ocrFallback, getManualValue } from '../field-utils';
+import { getManualValue } from '../field-utils';
+import { nationality, alienRegField, nameField, currentDateSplit } from '../field-presets';
 
 // ── Text field mappings (24) ──
 
 const textFieldMappings: TextFieldMapping[] = [
   // 외국인 정보
-  {
-    field: 't1',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '국적'], ['alien_registration', '국적']) },
-  },
-  { field: 't2', source: { type: 'ocr', docType: 'alien_registration', key: '외국인등록번호' } },
-  {
-    field: 't3',
-    source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '성명(영문)'], ['alien_registration', '성명']) },
-  },
+  nationality('t1'),
+  alienRegField('t2'),
+  nameField('t3'),
   { field: 't4', source: { type: 'manual', fieldId: 'applicant_phone_kr' } },
   { field: 't5', source: { type: 'static', value: '' } },
 
@@ -49,18 +44,7 @@ const textFieldMappings: TextFieldMapping[] = [
   },
 
   // 확인일/서명
-  {
-    field: 't19',
-    source: { type: 'computed', fn: () => String(new Date().getFullYear()) },
-  },
-  {
-    field: 't20',
-    source: { type: 'computed', fn: () => String(new Date().getMonth() + 1).padStart(2, '0') },
-  },
-  {
-    field: 't21',
-    source: { type: 'computed', fn: () => String(new Date().getDate()).padStart(2, '0') },
-  },
+  ...currentDateSplit('t19', 't20', 't21'),
   { field: 't22', source: { type: 'manual', fieldId: 'landlord_name' } },
   { field: 't23', source: { type: 'ocr', docType: 'business_reg', key: '상호' } },
   { field: 't24', source: { type: 'static', value: '' } },
