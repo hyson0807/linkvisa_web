@@ -181,14 +181,24 @@ export const useCaseStore = create<CaseStore>()((set, get) => ({
   },
 
   setManualFields: (caseId, fields) => {
+    // Cancel any pending debounced flush to prevent stale overwrites
+    const timer = flushTimers.get(caseId);
+    if (timer) clearTimeout(timer);
+    flushTimers.delete(caseId);
+
+    // Merge any pending fields into this batch
+    const pending = pendingFields.get(caseId) ?? {};
+    pendingFields.delete(caseId);
+    const merged = { ...pending, ...fields };
+
     set((state) => ({
       cases: state.cases.map((c) =>
         c.id === caseId
-          ? { ...c, manualFields: { ...c.manualFields, ...fields } }
+          ? { ...c, manualFields: { ...c.manualFields, ...merged } }
           : c
       ),
     }));
-    caseApi.update(caseId, { manualFields: fields }).catch(() => {});
+    caseApi.update(caseId, { manualFields: merged }).catch(() => {});
   },
 
   removeFile: async (caseId, documentId, fileId) => {

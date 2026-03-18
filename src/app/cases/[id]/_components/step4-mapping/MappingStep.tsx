@@ -19,6 +19,7 @@ import FieldInput from './FieldInput';
 import BirthSexSection from './BirthSexSection';
 import SchoolSection from './SchoolSection';
 import AlienRegRow from './AlienRegRow';
+import AiReasonSection from './AiReasonSection';
 
 interface MappingStepProps {
   caseData: Case;
@@ -31,6 +32,7 @@ interface MappingStepProps {
 export default function MappingStep({ caseData, onNext, onPrev }: MappingStepProps) {
   const forms = useMemo(() => getFormsForCase(caseData), [caseData]);
   const setManualField = useCaseStore((s) => s.setManualField);
+  const setManualFields = useCaseStore((s) => s.setManualFields);
 
   const [activeFormId, setActiveFormId] = useState<string>(
     forms.length > 0 ? forms[0].id : '',
@@ -207,6 +209,25 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
                               digits={digits}
                               onDigitChange={(idx, val) => handleInputChange(ALIEN_REG_FIELDS[idx], val)}
                               onDigitBlur={(idx, val) => handleInputBlur(ALIEN_REG_FIELDS[idx], val)}
+                            />
+                          );
+                        }
+
+                        // Special: AI-assisted employment reason section
+                        if (group.id === 'reason' && formDef.id === 'employment_reason') {
+                          return (
+                            <AiReasonSection
+                              key={group.label}
+                              group={group}
+                              fields={groupFields}
+                              caseData={caseData}
+                              getFieldValue={getFieldValue}
+                              onFieldChange={handleInputChange}
+                              onFieldBlur={handleInputBlur}
+                              onApply={(fields) => {
+                                setLocalInputs((prev) => ({ ...prev, ...fields }));
+                                setManualFields(caseData.id, fields);
+                              }}
                             />
                           );
                         }
