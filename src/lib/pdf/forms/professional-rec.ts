@@ -57,21 +57,21 @@ const textFieldMappings: TextFieldMapping[] = [
     },
   },
   { field: 't17', source: { type: 'static', value: '' } },
+  { field: 't18', source: { type: 'static', value: '' } },
 
   // 날짜/추천자
   {
-    field: 't18',
+    field: 't19',
     source: { type: 'computed', fn: () => String(new Date().getFullYear()) },
   },
   {
-    field: 't19',
+    field: 't20',
     source: { type: 'computed', fn: () => String(new Date().getMonth() + 1).padStart(2, '0') },
   },
   {
-    field: 't20',
+    field: 't21',
     source: { type: 'computed', fn: () => String(new Date().getDate()).padStart(2, '0') },
   },
-  { field: 't21', source: { type: 'static', value: '' } },
   { field: 't22', source: { type: 'static', value: '' } },
 ];
 
@@ -98,12 +98,12 @@ const fieldLabels: Record<string, string> = {
   t14: '전화번호',
   t15: '사업자등록번호',
   t16: '업종 및 분야',
-  t17: '비고',
-  t18: '년',
-  t19: '월',
-  t20: '일',
-  t21: '추천자',
-  t22: '부',
+  t17: '비고 (좌)',
+  t18: '비고 (우)',
+  t19: '년',
+  t20: '월',
+  t21: '일',
+  t22: '추천자',
 };
 
 const checkboxLabels: Record<string, string> = {};
@@ -120,13 +120,13 @@ const fieldGroups: FieldGroup[] = [
   {
     id: 'company_info',
     label: '고용(예정)사업장',
-    fields: ['t11', 't12', 't13', 't14', 't15', 't16', 't17'],
+    fields: ['t11', 't12', 't13', 't14', 't15', 't16', 't17', 't18'],
     cols: '1fr 1fr',
   },
   {
     id: 'date_rec',
     label: '날짜 / 추천자',
-    fields: ['t18', 't19', 't20', 't21', 't22'],
+    fields: ['t19', 't20', 't21', 't22'],
     cols: '1fr 1fr 1fr',
   },
 ];

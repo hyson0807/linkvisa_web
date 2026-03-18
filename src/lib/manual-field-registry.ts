@@ -300,6 +300,19 @@ export const manualFieldRegistry: ManualFieldDef[] = [
     placeholder: '예: 02-1234-5678',
     halfWidth: true,
   },
+  {
+    id: 'guarantor_sex',
+    label: '보증인 성별',
+    section: 'guarantor',
+    fieldType: 'select',
+    options: [
+      { value: '남', label: '남 (M)' },
+      { value: '여', label: '여 (F)' },
+    ],
+    required: false,
+    requiredForVisas: ['E-7'],
+    halfWidth: true,
+  },
 
   // ── 거주숙소 확인서 관련 ──
   {

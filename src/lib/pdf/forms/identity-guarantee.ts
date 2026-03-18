@@ -46,24 +46,24 @@ const textFieldMappings: TextFieldMapping[] = [
   { field: 't15', source: { type: 'ocr', docType: 'business_reg', key: '사업장소재지' } },
   { field: 't16', source: { type: 'manual', fieldId: 'guarantor_relation' } },
   { field: 't17', source: { type: 'ocr', docType: 'business_reg', key: '상호' } },
-  { field: 't18', source: { type: 'manual', fieldId: 'guarantor_position' } },
-  { field: 't19', source: { type: 'ocr', docType: 'business_reg', key: '사업장소재지' } },
+  { field: 't18', source: { type: 'ocr', docType: 'business_reg', key: '사업장소재지' } },
+  { field: 't19', source: { type: 'manual', fieldId: 'guarantor_position' } },
   { field: 't20', source: { type: 'static', value: '' } },
 
-  // 보증기간/날짜
-  { field: 't21', source: { type: 'manual', fieldId: 'guarantee_period' } },
+  // 날짜/서명
   {
-    field: 't22',
+    field: 't21',
     source: { type: 'computed', fn: () => String(new Date().getFullYear()) },
   },
   {
-    field: 't23',
+    field: 't22',
     source: { type: 'computed', fn: () => String(new Date().getMonth() + 1).padStart(2, '0') },
   },
   {
-    field: 't24',
+    field: 't23',
     source: { type: 'computed', fn: () => String(new Date().getDate()).padStart(2, '0') },
   },
+  { field: 't24', source: { type: 'manual', fieldId: 'guarantor_name' } },
 ];
 
 // ── Checkbox mappings (4) ──
@@ -71,8 +71,8 @@ const textFieldMappings: TextFieldMapping[] = [
 const checkboxMappings: CheckboxMapping[] = [
   { field: 'c1', condition: (c) => { const v = c.manualFields?.sex || getSex(c); return v === '남' || v === 'M'; } },
   { field: 'c2', condition: (c) => { const v = c.manualFields?.sex || getSex(c); return v === '여' || v === 'F'; } },
-  { field: 'c3', condition: () => false },
-  { field: 'c4', condition: () => false },
+  { field: 'c3', condition: (c) => c.manualFields?.guarantor_sex === '남' },
+  { field: 'c4', condition: (c) => c.manualFields?.guarantor_sex === '여' },
 ];
 
 // ── Labels ──
@@ -95,13 +95,13 @@ const fieldLabels: Record<string, string> = {
   t15: '보증인 주소',
   t16: '보증인 관계',
   t17: '보증인 근무처',
-  t18: '보증인 직위',
-  t19: '근무처 주소',
+  t18: '근무처 주소',
+  t19: '보증인 직위',
   t20: '비고',
-  t21: '보증기간',
-  t22: '년',
-  t23: '월',
-  t24: '일',
+  t21: '년',
+  t22: '월',
+  t23: '일',
+  t24: '보증인 성명 (서명)',
 };
 
 const checkboxLabels: Record<string, string> = {
@@ -128,7 +128,7 @@ const fieldGroups: FieldGroup[] = [
   },
   {
     id: 'period_date',
-    label: '보증기간 / 날짜',
+    label: '날짜 / 서명',
     fields: ['t21', 't22', 't23', 't24'],
     cols: '1fr 1fr 1fr 1fr',
   },

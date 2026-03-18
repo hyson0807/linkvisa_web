@@ -125,7 +125,8 @@ function getDefaultFontSize(da?: string): number | undefined {
   const match = da?.match(tfRegex);
   if (!match) return undefined;
   const fontSize = Number.parseFloat(match[2]);
-  return Number.isFinite(fontSize) ? fontSize : undefined;
+  // Font size 0 in PDF DA means "auto-size" — treat as unset so DEFAULT_MAX_FONT_SIZE is used
+  return Number.isFinite(fontSize) && fontSize > 0 ? fontSize : undefined;
 }
 
 function setWidgetFontSize(

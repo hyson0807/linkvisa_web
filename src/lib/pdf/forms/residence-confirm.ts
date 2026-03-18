@@ -27,42 +27,42 @@ const textFieldMappings: TextFieldMapping[] = [
   { field: 't10', source: { type: 'static', value: '' } },
   { field: 't11', source: { type: 'static', value: '' } },
   { field: 't12', source: { type: 'static', value: '' } },
+  { field: 't13', source: { type: 'static', value: '' } },
+  { field: 't14', source: { type: 'static', value: '' } },
+  { field: 't15', source: { type: 'static', value: '' } },
 
   // 제공일
   {
-    field: 't13',
+    field: 't16',
     source: { type: 'manual', fieldId: 'residence_start_date' },
     transform: 'date-yyyy',
   },
   {
-    field: 't14',
+    field: 't17',
     source: { type: 'manual', fieldId: 'residence_start_date' },
     transform: 'date-mm',
   },
   {
-    field: 't15',
+    field: 't18',
     source: { type: 'manual', fieldId: 'residence_start_date' },
     transform: 'date-dd',
   },
 
   // 확인일/서명
   {
-    field: 't16',
+    field: 't19',
     source: { type: 'computed', fn: () => String(new Date().getFullYear()) },
   },
   {
-    field: 't17',
+    field: 't20',
     source: { type: 'computed', fn: () => String(new Date().getMonth() + 1).padStart(2, '0') },
   },
   {
-    field: 't18',
+    field: 't21',
     source: { type: 'computed', fn: () => String(new Date().getDate()).padStart(2, '0') },
   },
-  { field: 't19', source: { type: 'manual', fieldId: 'landlord_name' } },
-  { field: 't20', source: { type: 'ocr', docType: 'business_reg', key: '상호' } },
-  { field: 't21', source: { type: 'static', value: '' } },
-  { field: 't22', source: { type: 'static', value: '' } },
-  { field: 't23', source: { type: 'static', value: '' } },
+  { field: 't22', source: { type: 'manual', fieldId: 'landlord_name' } },
+  { field: 't23', source: { type: 'ocr', docType: 'business_reg', key: '상호' } },
   { field: 't24', source: { type: 'static', value: '' } },
 ];
 
@@ -95,19 +95,19 @@ const fieldLabels: Record<string, string> = {
   t9: '제공자 연락처',
   t10: '기타 (관계)',
   t11: '기타 (소유)',
-  t12: '기타 (주거)',
-  t13: '제공일 (년)',
-  t14: '제공일 (월)',
-  t15: '제공일 (일)',
-  t16: '확인일 (년)',
-  t17: '확인일 (월)',
-  t18: '확인일 (일)',
-  t19: '성명 (서명)',
-  t20: '업체명',
-  t21: '여분1',
-  t22: '여분2',
-  t23: '여분3',
-  t24: '여분4',
+  t12: '기타 (소유2)',
+  t13: '기타 (주거)',
+  t14: '기타 (주거2)',
+  t15: '기타 (주거3)',
+  t16: '제공일 (년)',
+  t17: '제공일 (월)',
+  t18: '제공일 (일)',
+  t19: '확인일 (년)',
+  t20: '확인일 (월)',
+  t21: '확인일 (일)',
+  t22: '성명 (서명)',
+  t23: '업체명',
+  t24: '출입국·외국인청',
 };
 
 const checkboxLabels: Record<string, string> = {
@@ -141,19 +141,19 @@ const fieldGroups: FieldGroup[] = [
   {
     id: 'details',
     label: '제공 상세',
-    fields: ['t10', 't11', 't12'],
+    fields: ['t10', 't11', 't12', 't13', 't14', 't15'],
     cols: '1fr 1fr 1fr',
   },
   {
     id: 'dates',
     label: '제공일 / 확인일',
-    fields: ['t13', 't14', 't15', 't16', 't17', 't18'],
+    fields: ['t16', 't17', 't18', 't19', 't20', 't21'],
     cols: '1fr 1fr 1fr',
   },
   {
     id: 'signature',
     label: '서명',
-    fields: ['t19', 't20', 't21', 't22', 't23', 't24'],
+    fields: ['t22', 't23', 't24'],
     cols: '1fr 1fr',
   },
 ];
