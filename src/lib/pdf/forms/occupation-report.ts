@@ -54,13 +54,13 @@ const textFieldMappings: TextFieldMapping[] = [
     transform: 'date-dd',
   },
   {
-    field: 't7',
+    field: 't20',
     source: { type: 'computed', fn: (c) => ocrFallback(c, ['passport', '국적'], ['alien_registration', '국적']) },
   },
 
-  // 외국인등록번호 13자리 (t8-t20)
+  // 외국인등록번호 13자리 (t7-t19)
   ...Array.from({ length: 13 }, (_, i) => ({
-    field: `t${8 + i}`,
+    field: `t${7 + i}`,
     source: { type: 'ocr' as const, docType: 'alien_registration', key: '외국인등록번호' },
     transform: 'alien-reg-digit' as const,
     digitIndex: i,
@@ -99,14 +99,14 @@ function getSex(c: Case): string {
 }
 
 const checkboxMappings: CheckboxMapping[] = [
-  // c1=남, c2=여
-  { field: 'c1', condition: (c) => { const v = c.manualFields?.sex || getSex(c); return v === '남' || v === 'M'; } },
-  { field: 'c2', condition: (c) => { const v = c.manualFields?.sex || getSex(c); return v === '여' || v === 'F'; } },
-  // c3-c54: 직업분류 52개
+  // c1-c52: 직업분류 52개
   ...OCCUPATION_CATEGORIES.map((cat, i) => ({
-    field: `c${3 + i}`,
+    field: `c${1 + i}`,
     condition: (c: Case) => c.manualFields?.occupation_category === cat,
   })),
+  // c53=남, c54=여
+  { field: 'c53', condition: (c) => { const v = c.manualFields?.sex || getSex(c); return v === '남' || v === 'M'; } },
+  { field: 'c54', condition: (c) => { const v = c.manualFields?.sex || getSex(c); return v === '여' || v === 'F'; } },
 ];
 
 // ── Labels ──
@@ -118,7 +118,7 @@ const fieldLabels: Record<string, string> = {
   t4: '생년 (yyyy)',
   t5: '생월 (mm)',
   t6: '생일 (dd)',
-  t7: '국적',
+  t20: '국적',
   t21: '직업명',
   t22: '년',
   t23: '월',
@@ -127,19 +127,19 @@ const fieldLabels: Record<string, string> = {
   t26: '대리인',
 };
 
-// Alien registration digit fields (t8-t20)
+// Alien registration digit fields (t7-t19)
 for (let i = 0; i < 13; i++) {
-  fieldLabels[`t${8 + i}`] = `외국인등록번호 (${i + 1}번째 자리)`;
+  fieldLabels[`t${7 + i}`] = `외국인등록번호 (${i + 1}번째 자리)`;
 }
 
 const checkboxLabels: Record<string, string> = {
-  c1: '남 (M)',
-  c2: '여 (F)',
+  c53: '남 (M)',
+  c54: '여 (F)',
 };
 
-// c3-c54: occupation category labels
+// c1-c52: occupation category labels
 OCCUPATION_CATEGORIES.forEach((cat, i) => {
-  checkboxLabels[`c${3 + i}`] = cat;
+  checkboxLabels[`c${1 + i}`] = cat;
 });
 
 // ── Field groups ──
@@ -148,13 +148,13 @@ const fieldGroups: FieldGroup[] = [
   {
     id: 'personal',
     label: '인적사항',
-    fields: ['t1', 't2', 't3', 't4', 't5', 't6', 't7'],
+    fields: ['t1', 't2', 't3', 't4', 't5', 't6', 't20'],
     cols: '1fr 1fr',
   },
   {
     id: 'alien_reg',
     label: '외국인등록번호',
-    fields: Array.from({ length: 13 }, (_, i) => `t${8 + i}`),
+    fields: Array.from({ length: 13 }, (_, i) => `t${7 + i}`),
   },
   {
     id: 'occupation',
@@ -173,12 +173,14 @@ const fieldGroups: FieldGroup[] = [
 
 const fieldPageHints: Record<string, number> = {};
 
-// t1-t21, c1-c14 → page 0
+// t1-t21, c1-c14, c53-c54(성별) → page 0
 for (let i = 1; i <= 21; i++) fieldPageHints[`t${i}`] = 0;
 for (let i = 1; i <= 14; i++) fieldPageHints[`c${i}`] = 0;
+fieldPageHints['c53'] = 0;
+fieldPageHints['c54'] = 0;
 
-// c15-c54 → page 1
-for (let i = 15; i <= 54; i++) fieldPageHints[`c${i}`] = 1;
+// c15-c52 → page 1
+for (let i = 15; i <= 52; i++) fieldPageHints[`c${i}`] = 1;
 
 // t22-t26 → page 2
 for (let i = 22; i <= 26; i++) fieldPageHints[`t${i}`] = 2;
