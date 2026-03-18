@@ -45,7 +45,7 @@ export interface CaseDocument {
 export interface ManualFieldDef {
   id: string;
   label: string;
-  section: 'unified_app' | 'employment_reason' | 'guarantor' | 'residence' | 'other';
+  section: 'unified_app' | 'employment_reason' | 'guarantor' | 'residence' | 'occupation_report' | 'other';
   fieldType: 'text' | 'date' | 'select' | 'textarea' | 'radio';
   options?: { value: string; label: string }[];
   defaultValue?: string;
