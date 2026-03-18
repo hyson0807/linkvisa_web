@@ -2,19 +2,17 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/store/auth-store";
+import { useOptionalAuth } from "./useOptionalAuth";
 
 export function useRequireAuth() {
   const router = useRouter();
-  const { user, isReady, fetchUser } = useAuthStore();
+  const { user, isReady } = useOptionalAuth();
 
   useEffect(() => {
-    if (!isReady) {
-      fetchUser();
-    } else if (!user) {
+    if (isReady && !user) {
       router.replace("/login");
     }
-  }, [isReady, user, fetchUser, router]);
+  }, [isReady, user, router]);
 
   return { user, isLoading: !isReady };
 }

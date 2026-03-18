@@ -6,9 +6,10 @@ import AuthModal from "@/components/auth/AuthModal";
 
 export default function GuestSaveBanner() {
   const user = useAuthStore((s) => s.user);
+  const isReady = useAuthStore((s) => s.isReady);
   const [modalTab, setModalTab] = useState<"login" | "signup" | null>(null);
 
-  if (user) return null;
+  if (!isReady || user) return null;
 
   return (
     <>
