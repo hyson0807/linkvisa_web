@@ -309,9 +309,11 @@ export async function fillFormPdf(formDef: FormDefinition, caseData: Case): Prom
   // Fill checkboxes
   for (const mapping of formDef.checkboxMappings) {
     try {
+      const checkbox = form.getCheckBox(mapping.field);
       if (mapping.condition(caseData)) {
-        form.getCheckBox(mapping.field).check();
+        checkbox.check();
       }
+      checkbox.defaultUpdateAppearances();
     } catch {
       // Skip missing fields
     }
