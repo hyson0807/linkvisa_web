@@ -1,6 +1,12 @@
 import type { Case } from '@/types/case';
 import { documentRegistry } from '../document-registry';
 
+// ── Form-scoped manual field key ──
+
+export function formScopedKey(formId: string, pdfField: string): string {
+  return `${formId}::${pdfField}`;
+}
+
 // ── Source types ──
 
 export type FieldSource =

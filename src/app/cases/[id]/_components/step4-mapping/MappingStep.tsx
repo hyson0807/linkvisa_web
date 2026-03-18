@@ -5,6 +5,7 @@ import type { Case } from '@/types/case';
 import '@/lib/pdf/forms';
 import { getFormsForCase } from '@/lib/pdf/form-registry';
 import { analyzeMappingStatus } from '@/lib/pdf/analyze';
+import { formScopedKey } from '@/lib/pdf/field-utils';
 import { useCaseStore } from '@/store/case-store';
 import {
   ALIEN_REG_FIELDS,
@@ -50,17 +51,6 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
 
   const hasMappings = (formDef: typeof forms[0]) =>
     formDef.textFieldMappings.length > 0 || formDef.checkboxMappings.length > 0;
-
-  const handleInputBlur = (pdfField: string, value: string) => {
-    setManualField(caseData.id, pdfField, value.trim());
-  };
-
-  const handleInputChange = (pdfField: string, value: string) => {
-    setLocalInputs((prev) => ({ ...prev, [pdfField]: value }));
-  };
-
-  const getFieldValue = (pdfField: string, fallback?: string) =>
-    localInputs[pdfField] ?? (caseData.manualFields?.[pdfField] || fallback) ?? '';
 
   /** Build a lookup from pdfField → AnyField (mapped or unmapped) */
   const buildFieldMap = (analysis: ReturnType<typeof analyzeMappingStatus>) => {
@@ -128,6 +118,22 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
           if (formDef.id !== activeFormId) return null;
           const hasMappingData = hasMappings(formDef);
 
+          // Form-scoped field handlers to namespace by formDef.id
+          const fid = formDef.id;
+
+          const formGetFieldValue = (pdfField: string, fallback?: string) => {
+            const key = formScopedKey(fid, pdfField);
+            return localInputs[key] ?? (caseData.manualFields?.[key] || fallback) ?? '';
+          };
+
+          const formHandleChange = (pdfField: string, value: string) => {
+            setLocalInputs((prev) => ({ ...prev, [formScopedKey(fid, pdfField)]: value }));
+          };
+
+          const formHandleBlur = (pdfField: string, value: string) => {
+            setManualField(caseData.id, formScopedKey(fid, pdfField), value.trim());
+          };
+
           return (
             <div key={formDef.id} className="p-5">
               {!hasMappingData ? (
@@ -173,9 +179,9 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
                               group={group}
                               fields={groupFields}
                               caseData={caseData}
-                              getFieldValue={getFieldValue}
-                              onFieldChange={handleInputChange}
-                              onFieldBlur={handleInputBlur}
+                              getFieldValue={formGetFieldValue}
+                              onFieldChange={formHandleChange}
+                              onFieldBlur={formHandleBlur}
                               onManualField={(fieldId, val) => setManualField(caseData.id, fieldId, val)}
                             />
                           );
@@ -189,9 +195,9 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
                               group={group}
                               fields={groupFields}
                               caseData={caseData}
-                              getFieldValue={getFieldValue}
-                              onFieldChange={handleInputChange}
-                              onFieldBlur={handleInputBlur}
+                              getFieldValue={formGetFieldValue}
+                              onFieldChange={formHandleChange}
+                              onFieldBlur={formHandleBlur}
                               onManualField={(fieldId, val) => setManualField(caseData.id, fieldId, val)}
                             />
                           );
@@ -201,14 +207,14 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
                         if (group.id === 'alien_reg') {
                           const digits = ALIEN_REG_FIELDS.map((field) => {
                             const f = fieldMap.get(field);
-                            return getFieldValue(field, f ? getDefaultValue(f) : '');
+                            return formGetFieldValue(field, f ? getDefaultValue(f) : '');
                           });
                           return (
                             <AlienRegRow
                               key={group.label}
                               digits={digits}
-                              onDigitChange={(idx, val) => handleInputChange(ALIEN_REG_FIELDS[idx], val)}
-                              onDigitBlur={(idx, val) => handleInputBlur(ALIEN_REG_FIELDS[idx], val)}
+                              onDigitChange={(idx, val) => formHandleChange(ALIEN_REG_FIELDS[idx], val)}
+                              onDigitBlur={(idx, val) => formHandleBlur(ALIEN_REG_FIELDS[idx], val)}
                             />
                           );
                         }
@@ -221,12 +227,15 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
                               group={group}
                               fields={groupFields}
                               caseData={caseData}
-                              getFieldValue={getFieldValue}
-                              onFieldChange={handleInputChange}
-                              onFieldBlur={handleInputBlur}
+                              getFieldValue={formGetFieldValue}
+                              onFieldChange={formHandleChange}
+                              onFieldBlur={formHandleBlur}
                               onApply={(fields) => {
-                                setLocalInputs((prev) => ({ ...prev, ...fields }));
-                                setManualFields(caseData.id, fields);
+                                const prefixed = Object.fromEntries(
+                                  Object.entries(fields).map(([k, v]) => [formScopedKey(fid, k), v])
+                                );
+                                setLocalInputs((prev) => ({ ...prev, ...prefixed }));
+                                setManualFields(caseData.id, prefixed);
                               }}
                             />
                           );
@@ -237,9 +246,9 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
                             key={group.label}
                             group={group}
                             fields={groupFields}
-                            getFieldValue={getFieldValue}
-                            onFieldChange={handleInputChange}
-                            onFieldBlur={handleInputBlur}
+                            getFieldValue={formGetFieldValue}
+                            onFieldChange={formHandleChange}
+                            onFieldBlur={formHandleBlur}
                           />
                         );
                       })}
@@ -251,9 +260,9 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
                             <FieldInput
                               key={f.pdfField}
                               field={f}
-                              value={getFieldValue(f.pdfField, getDefaultValue(f))}
-                              onChange={(val) => handleInputChange(f.pdfField, val)}
-                              onBlur={(val) => handleInputBlur(f.pdfField, val)}
+                              value={formGetFieldValue(f.pdfField, getDefaultValue(f))}
+                              onChange={(val) => formHandleChange(f.pdfField, val)}
+                              onBlur={(val) => formHandleBlur(f.pdfField, val)}
                             />
                           ))}
                         </div>

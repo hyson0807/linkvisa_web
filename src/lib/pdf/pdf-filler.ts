@@ -2,9 +2,63 @@ import { PDFDocument, PDFFont } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { Case } from '@/types/case';
 import type { FormDefinition } from './form-registry';
-import { resolveSource, applyTransform } from './field-utils';
+import { resolveSource, applyTransform, formScopedKey } from './field-utils';
 
 const FONT_PATH = '/fonts/NanumGothic-Regular.ttf';
+const DEFAULT_MAX_FONT_SIZE = 10;
+const DEFAULT_MIN_FONT_SIZE = 4;
+const FIELD_PADDING = 8;
+
+function countWrappedLines(
+  text: string,
+  font: PDFFont,
+  fontSize: number,
+  maxWidth: number,
+): number {
+  let totalLines = 0;
+  for (const paragraph of text.split('\n')) {
+    if (!paragraph) {
+      totalLines++;
+      continue;
+    }
+    let lineWidth = 0;
+    let lines = 1;
+    for (const char of paragraph) {
+      const charWidth = font.widthOfTextAtSize(char, fontSize);
+      if (lineWidth + charWidth > maxWidth) {
+        lines++;
+        lineWidth = charWidth;
+      } else {
+        lineWidth += charWidth;
+      }
+    }
+    totalLines += lines;
+  }
+  return totalLines;
+}
+
+function calcFitFontSize(
+  text: string,
+  font: PDFFont,
+  fieldWidth: number,
+  fieldHeight: number,
+  maxSize: number = DEFAULT_MAX_FONT_SIZE,
+  minSize: number = DEFAULT_MIN_FONT_SIZE,
+): number {
+  // Fast path: short single-line text almost certainly fits at max size
+  if (!text.includes('\n') && font.widthOfTextAtSize(text, maxSize) <= fieldWidth) {
+    return maxSize;
+  }
+
+  for (let size = maxSize; size >= minSize; size -= 0.5) {
+    const lineHeight = font.heightAtSize(size);
+    const lines = countWrappedLines(text, font, size, fieldWidth);
+    if (lines * lineHeight <= fieldHeight) {
+      return size;
+    }
+  }
+  return minSize;
+}
 
 let cachedFont: ArrayBuffer | null = null;
 const templateCache = new Map<string, ArrayBuffer>();
@@ -48,7 +102,7 @@ export async function fillFormPdf(formDef: FormDefinition, caseData: Case): Prom
   // Fill text fields
   for (const mapping of formDef.textFieldMappings) {
     try {
-      const manualOverride = caseData.manualFields?.[mapping.field];
+      const manualOverride = caseData.manualFields?.[formScopedKey(formDef.id, mapping.field)];
       const rawValue = manualOverride || resolveSource(caseData, mapping.source);
       const value = applyTransform(rawValue, mapping.transform, mapping.digitIndex);
       if (!value) continue;
@@ -56,6 +110,17 @@ export async function fillFormPdf(formDef: FormDefinition, caseData: Case): Prom
       const textField = form.getTextField(mapping.field);
       textField.setText(value);
       if (koreanFont) {
+        const widgets = textField.acroField.getWidgets();
+        if (widgets.length > 0) {
+          const { width, height } = widgets[0].getRectangle();
+          const fontSize = calcFitFontSize(
+            value,
+            koreanFont,
+            width - FIELD_PADDING,
+            height - FIELD_PADDING,
+          );
+          textField.setFontSize(fontSize);
+        }
         textField.updateAppearances(koreanFont);
       }
     } catch {

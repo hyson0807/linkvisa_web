@@ -1,7 +1,7 @@
 import type { Case } from '@/types/case';
 import type { FormDefinition } from './form-registry';
 import { getFormsForCase } from './form-registry';
-import { resolveSource, applyTransform, describeSource } from './field-utils';
+import { resolveSource, applyTransform, describeSource, formScopedKey } from './field-utils';
 
 export interface MappedField {
   pdfField: string;
@@ -28,7 +28,7 @@ export function analyzeMappingStatus(formDef: FormDefinition, caseData: Case): M
 
   // 1. Analyze text field mappings
   for (const m of formDef.textFieldMappings) {
-    const manualOverride = caseData.manualFields?.[m.field];
+    const manualOverride = caseData.manualFields?.[formScopedKey(formDef.id, m.field)];
     const rawValue = manualOverride || resolveSource(caseData, m.source);
     const value = applyTransform(rawValue, m.transform, m.digitIndex);
 
