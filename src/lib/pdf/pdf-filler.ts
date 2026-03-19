@@ -1,4 +1,4 @@
-import { PDFArray, PDFBool, PDFDict, PDFDocument, PDFFont, PDFName, PDFRef } from 'pdf-lib';
+import { PDFArray, PDFBool, PDFDict, PDFDocument, PDFFont, PDFName, PDFObject, PDFRef } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { Case } from '@/types/case';
 import type { FormDefinition } from './form-registry';
@@ -182,7 +182,7 @@ function canFlattenForm(
       const pageRef = widget.P();
       if (pageRef && pages.some((page) => page.ref === pageRef)) continue;
 
-      const widgetRef = pdfDoc.context.getObjectRef(widget.dict);
+      const widgetRef = pdfDoc.context.getObjectRef(widget.dict as unknown as PDFObject);
       if (widgetRef && pdfDoc.findPageForAnnotationRef(widgetRef)) continue;
 
       return false;
@@ -218,7 +218,7 @@ function repairWidgetPageRefs(
       const pageRef = widget.P();
       if (pageRef && pages.some((page) => page.ref === pageRef)) continue;
 
-      const widgetRef = pdfDoc.context.getObjectRef(widget.dict);
+      const widgetRef = pdfDoc.context.getObjectRef(widget.dict as unknown as PDFObject);
       const resolvedPage = widgetRef ? pdfDoc.findPageForAnnotationRef(widgetRef) : undefined;
       const targetPage = resolvedPage ?? hintedPage;
 
@@ -329,7 +329,7 @@ export async function fillFormPdf(formDef: FormDefinition, caseData: Case): Prom
 
       const textField = form.getTextField(mapping.field);
       if (koreanFont) {
-        const fontSize = calcFitFontSize(value, koreanFont, textField);
+        const fontSize = calcFitFontSize(value, koreanFont, textField as never);
         textField.setFontSize(fontSize);
         setWidgetFontSize(textField, fontSize);
       }
