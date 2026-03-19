@@ -8,7 +8,6 @@ import { analyzeMappingStatus } from '@/lib/pdf/analyze';
 import { formScopedKey } from '@/lib/pdf/field-utils';
 import { useCaseStore } from '@/store/case-store';
 import {
-  ALIEN_REG_FIELDS,
   APP_TYPE_QUAL_FIELDS,
   UNIFIED_FIELD_GROUPS,
   getDefaultValue,
@@ -205,7 +204,8 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
 
                         // Special: alien reg row
                         if (group.id === 'alien_reg') {
-                          const digits = ALIEN_REG_FIELDS.map((field) => {
+                          const regFields = group.fields;
+                          const digits = regFields.map((field) => {
                             const f = fieldMap.get(field);
                             return formGetFieldValue(field, f ? getDefaultValue(f) : '');
                           });
@@ -213,8 +213,8 @@ export default function MappingStep({ caseData, onNext, onPrev }: MappingStepPro
                             <AlienRegRow
                               key={group.label}
                               digits={digits}
-                              onDigitChange={(idx, val) => formHandleChange(ALIEN_REG_FIELDS[idx], val)}
-                              onDigitBlur={(idx, val) => formHandleBlur(ALIEN_REG_FIELDS[idx], val)}
+                              onDigitChange={(idx, val) => formHandleChange(regFields[idx], val)}
+                              onDigitBlur={(idx, val) => formHandleBlur(regFields[idx], val)}
                             />
                           );
                         }
